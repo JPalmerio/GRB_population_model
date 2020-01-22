@@ -1,0 +1,35 @@
+luminosity_function:
+    model: 'ES'  # ES: Evolv. Schechter, EPL: Evolv. Power Law
+    logLmin: 49.6989700043  # log(erg/s)
+    logLmax: 53.0  # log(erg/s)
+    logLbreak: 52.22    # log(erg/s)
+    slope: 1.50
+    k_evol: 2.0  # k_evol >= 0
+
+redshift_distribution:
+    model: 'BExp'  # BExp: Broken Exponential
+    zmax: 20
+    zm: 2.10
+    a: 0.66
+    b: -0.62
+    zeta:
+
+spectral_shape:
+    model: 'GBM_Band'  # GBM_Band, GBM_Band_old: no args, FBand: Fixed Band, alpha and beta args
+    alpha: 0.6
+    beta: 2.5
+
+peak_energy_distribution:
+    model: 'LN' # LN: LogNormal, A: Amati-like
+    Ep0: 690 # keV
+    sigmaEp: 0.45
+    alpha_amati: 0.3
+
+t90obs_distribution:
+    mu: 1.45
+    sigma: 0.47
+
+Cvar_distribution:
+    mu: 0.04
+    sigma: 0.22
+    correl_slope: 0.413

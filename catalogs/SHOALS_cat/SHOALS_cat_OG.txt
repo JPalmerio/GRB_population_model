@@ -1,0 +1,135 @@
+#Table 3
+#The SHOALS GRB Sample
+# Downloaded from ApJ
+#GRB	S_BAT^a	R. A.^b	Decl.^b	Unc.^c	Type.^d	OT?^e	Dusty?^f	References^i	z	Early?^g	Origin^h	References^i	
+050128	51	14:38:17.68	-34:45:55.4	1.70	X			1	<5.5	N	host	*	
+050315	32	20:25:54.17	-42:36:02.2	0.28	O	Y		2	1.9500	Y	AG	3	
+050318	11	03:18:51.01	-46:23:44.0	0.60	O	Y		4	1.4436	Y	AG	3	
+050319	13	10:16:47.94	+43:32:53.5	0.40	O	Y		5	3.2425	Y	AG	6	
+050401	83	16:31:28.80	+02:11:14.0	0.43	O	Y	Y	2	2.8983	Y	AG	6	
+050525A	151	18:32:32.59	+26:20:22.3	0.31	O	Y		2	0.606	Y	host	7	
+050726	20	13:20:11.95	-32:03:51.2	0.32	U	Y		2	<3.5	N	AG	*	
+050730	24	14:08:17.10	-03:46:17.6	0.37	O	Y		8	3.9693	Y	AG	6	
+050802	22	14:37:05.84	+27:47:12.4	0.60	O	Y		*	1.7102	Y	AG	6	
+050803	22	23:22:37.86	+05:47:08.0	1.40	X	N	Y	1	${4.3}_{-2.4}^{+0.6}$	N	host	*	
+050814	20	17:36:45.39	+46:20:21.2	0.30	O	Y		9	5.3	Y	AG	10	
+050820A	34	22:29:38.10	+19:33:36.8	0.31	O	Y		8	2.6147	Y	AG	6	
+050822	25	03:24:27.22	-46:02:00.1	0.70	X			11	1.434	N	host	12	
+050904	52	00:54:50.88	+14:05:09.5	0.40	O	Y		*	6.295	Y	AG	13	
+050922B	24	00:23:13.38	-05:36:17.5	1.70	X	N		1	${4.9}_{-0.6}^{+0.3}$	N	host	*	
+050922C	16	21:09:33.08	-08:45:30.3	0.30	O	Y		14	2.1995	Y	AG	6	
+051001	18	23:23:48.72	-31:31:23.6	1.50	X	N	Y	11	2.4296	N	host	15	
+051006	12	07:23:14.10	+09:30:19.4	1.50	X	Y	Y	1	1.059	N	host	12	
+060115	17	03:36:08.32	+17:20:42.8	0.31	O	Y		8	3.5328	Y	AG	6	
+060202	22	02:23:22.94	+38:23:03.9	0.50	I	N	Y	*	0.785	N	host	16	
+060204B	29	14:07:14.89	+27:40:36.2	1.10	O	Y		17	2.3393	N	host	*	
+060210	76	03:50:57.38	+27:01:34.2	0.60	O	Y	Y	18	3.9122	Y	AG	6	
+060218	65	03:21:39.68	+16:52:01.9	0.28	O	Y		8	0.0331	Y	host	19	
+060306	22	02:44:22.92	-02:08:54.1	1.30	X	N	Y	11	1.559	N	host	20	
+060502A	23	16:03:42.62	+66:36:03.0	0.40	O	Y		*	1.5026	Y	AG	6	
+060510B	40	15:56:29.48	+78:34:12.1	0.20	O	Y		*	4.9	Y	AG	21	
+060522	11	21:31:44.84	+02:53:09.7	0.42	O	Y		8	5.11	Y	AG	22	
+060526	12	15:31:18.34	+00:17:04.9	0.16	O	Y		8	3.2213	Y	AG	6	
+060607A	26	21:58:50.40	-22:29:47.1	0.38	I	Y		8	3.0749	Y	AG	6	
+060707	16	23:48:19.06	-17:54:17.3	0.37	O	Y		8	3.4240	Y	AG	6	
+060714	29	15:11:26.41	-06:33:58.3	0.43	O	Y		8	2.7108	Y	AG	6	
+060719	15	01:13:43.71	-48:22:51.0	0.29	O	Y	Y	8	1.5320	N	host	15	
+060729	26	06:21:31.80	-62:22:12.3	0.27	O	Y		8	0.5428	Y	AG	6	
+060814	148	14:45:21.31	+20:35:10.5	0.18	O	IR	Y	8	1.9229	Y	host	15	
+060908	28	02:07:18.41	+00:20:31.3	0.42	O	Y		8	1.8836	Y	AG	6	
+060912A	14	00:21:08.14	+20:58:17.4	0.35	O	Y		8	0.937	Y	host	23	
+060927	11	21:58:12.01	+05:21:48.6	0.19	O	Y		8	5.467	Y	AG	24	
+061007	450	03:05:19.58	-50:30:02.3	0.33	O	Y		8	1.2622	Y	AG	6	
+061021	30	09:40:36.12	-21:57:04.8	0.30	O	Y		8	0.3463	N	AG	6	
+061110A	11	22:25:09.84	-02:15:31.4	0.37	O	Y		8	0.7578	Y	AG	6	
+061110B	14	21:35:40.39	+06:52:34.0	0.24	O	Y		8	3.4344	Y	AG	6	
+061121	139	09:48:54.55	-13:11:42.9	0.36	O	Y		8	1.3145	Y	AG	6	
+061202	35	07:02:06.09	-74:41:54.7	1.40	X			1	2.253	N	host	*	
+061222A	81	23:53:03.41	+46:31:58.6	0.30	I	IR	Y	25	2.088	N	host	26	
+070110	16	00:03:39.27	-52:58:27.2	0.30	O	Y		8	2.3521	Y	AG	6	
+070129	30	02:28:00.94	+11:41:04.1	0.31	O	Y		8	2.3384	N	host	15	
+070223	19	10:13:48.39	+43:08:00.7	0.40	I	Y		27	1.6295	N	host	*	
+070306	55	09:52:23.30	+10:28:55.2	0.31	O	IR	Y	8	1.4959	Y	host	28	
+070318	26	03:13:56.81	-42:56:46.1	0.35	O	Y		8	0.840	Y	AG	29	
+070328	91	04:20:27.73	-34:04:00.5	1.40	X			1	2.0627	N	host	20	
+070419B	75	21:02:49.77	-31:15:49.0	0.39	O	Y		8	1.9588	N	host	15	
+070508	201	20:51:11.70	-78:23:05.1	0.40	O	Y	Y	*	0.82	Y	host	30	
+070521	81	16:10:38.61	+30:15:21.9	1.40	X	N	Y	1	2.0865	N	host	20	
+070621	44	21:35:10.09	-24:49:03.1	1.40	X	N	Y	1	<5.5	N	host	*	
+070721B	36	02:12:32.96	-02:11:40.8	0.38	O	Y		8	3.6298	Y	AG	6	
+070808	13	00:27:03.36	+01:10:33.9	1.50	X	N	Y	1	1.35 +or- 0.85	N	${N}_{{\rm{H,X}}}$	*	
+071020	23	07:58:39.78	+32:51:40.4	0.35	I	Y		31	2.1462	Y	AG	6	
+071021	14	22:42:34.30	+23:43:06.2	0.60	O	IR	Y	32	2.4520	Y	host	15	
+071025	73	23:40:17.07	+31:46:42.8	0.35	I	Y	Y	33	${4.8}_{-0.4}^{+0.4}$	N	AG	34	
+071112C	30	02:36:50.95	+28:22:16.8	0.41	O	Y		5	0.8227	Y	AG	6	
+080205	20	06:33:00.63	+62:47:31.7	0.50	U	Y		35	${2.72}_{-0.74}^{+0.24}$	N	host	*	
+080207	61	13:50:02.97	+07:30:07.3	0.50	X	N	Y	36	2.0858	Y	host	15	
+080210	18	16:45:04.01	+13:49:35.6	0.60	U	Y		35	2.6419	Y	AG	6	
+080310	23	14:40:13.80	-00:10:30.7	0.40	O	Y		37	2.4274	Y	AG	6	
+080319A	44	13:45:20.01	+44:04:48.4	0.70	O	Y		38	2.0265	N	host	*	
+080319B	850	14:31:40.99	+36:18:08.7	0.30	O	Y		*	0.9382	Y	AG	6	
+080325	49	18:31:34.23	+36:31:24.8	0.30	I	IR	Y	39	1.78	N	host	40	
+080411	265	02:31:55.21	-71:18:07.3	0.50	U	Y		35	1.0301	Y	AG	6	
+080413A	35	19:09:11.75	-27:40:40.4	0.40	O	Y		*	2.4330	Y	AG	6	
+080413B	33	21:44:34.66	-19:58:52.4	0.50	U	Y		35	1.1014	Y	AG	6	
+080430	12	11:01:14.76	+51:41:08.0	0.40	O	Y		41	0.767	Y	AG	42	
+080603B	25	11:46:07.67	+68:03:39.8	0.30	U	Y		35	2.6892	Y	AG	6	
+080605	134	17:28:30.04	+04:00:56.0	0.30	O	Y	Y	*	1.6403	Y	AG	6	
+080607	247	12:59:47.21	+15:55:10.5	0.40	O	Y	Y	*	3.0368	Y	AG	6	
+080710	14	00:33:05.63	+19:30:05.4	0.30	O	Y		*	0.8454	Y	AG	6	
+080721	141	14:57:55.84	-11:43:24.6	0.40	O	Y		5	2.5914	Y	AG	6	
+080804	38	21:54:40.18	-53:11:04.8	0.35	O	Y		*	2.2045	Y	AG	6	
+080805	27	20:56:53.45	-62:26:40.0	0.60	O	Y		43	1.5042	Y	AG	6	
+080810	46	23:47:10.49	+00:19:11.3	0.30	O	Y		*	3.3604	Y	AG	6	
+080916A	42	22:25:06.23	-57:01:22.9	0.40	O	Y		*	0.6887	Y	AG	6	
+080928	24	06:20:16.83	-55:11:58.7	0.40	O	Y		*	1.6919	Y	AG	6	
+081008	43	18:39:49.86	-57:25:53.0	0.60	U	Y		35	1.967	Y	AG	44	
+081029	21	23:07:05.35	-68:09:19.7	0.50	U	Y		35	3.8479	Y	AG	45	
+081109A	40	22:03:09.61	-54:42:40.1	0.35	O	Y	Y	46	0.9787	N	host	15	
+081118	12	05:30:22.18	-43:18:05.1	0.60	O	Y		47	2.58	Y	AG	48	
+081121	42	05:57:06.17	-60:36:09.8	0.60	U	Y		35	2.512	Y	AG	49	
+081128	23	01:23:13.10	+38:07:38.7	0.20	O	Y		*	<3.4	N	host	*	
+081210	19	04:41:56.20	-11:15:26.8	0.64	U	Y		35	2.0631	N	host	20	
+081221	189	01:03:10.16	-24:32:51.6	0.25	I	IR	Y	*	2.26	N	host	50	
+081222	52	01:30:57.60	-34:05:41.6	0.50	U	Y		35	2.77	Y	AG	51	
+090313	15	13:13:36.20	+08:05:49.6	0.70	O	Y		52	3.375	Y	AG	53	
+090404	31	15:56:57.52	+35:30:57.5	0.40	R	N	Y	54	${3.0}_{-1.8}^{+0.8}$	N	host	16	
+090417B	23	13:58:46.58	+47:01:04.8	1.00	X	N	Y	11	0.345	N	host	55	
+090418A	47	17:57:15.16	+33:24:20.9	0.40	O	Y		56	1.608	Y	AG	57	
+090424	218	12:38:05.08	+16:50:15.0	0.60	O	Y		*	0.544	Y	host	58	
+090516A	90	09:13:02.60	-11:51:15.0	0.40	O	Y		*	4.109	Y	AG	59	
+090519	12	09:29:07.00	+00:10:48.9	0.60	O	Y		60	3.85	Y	AG	61	
+090530	11	11:57:40.49	+26:35:37.7	0.40	O	Y		*	1.266	N	host	62	
+090618	1090	19:35:58.73	+78:21:24.3	0.50	O	Y		*	0.54	Y	AG	63	
+090709A	253	19:19:42.64	+60:43:39.3	0.50	I	Y	Y	64	${1.8}_{-0.7}^{+0.5}$	N	host	16	
+090715B	57	16:45:21.63	+44:50:21.0	0.40	O	Y		*	3.00	Y	AG	65	
+090812	57	23:32:48.56	-10:36:17.2	0.40	O	Y		66	2.452	Y	AG	67	
+090814A	13	15:58:26.39	+25:37:52.4	0.40	O	Y		*	0.696	Y	AG	68	
+090926B	71	03:05:13.93	-39:00:22.2	1.40	X	N	Y	1	1.24	Y	AG	69	
+091018	14	02:08:44.63	-57:32:53.8	0.50	O	Y		*	0.971	Y	AG	70	
+091029	24	04:00:42.62	-55:57:20.0	0.50	O	Y		*	2.752	Y	AG	71	
+091109A	16	20:37:01.82	-44:09:29.6	0.40	O	Y		*	3.076	Y	AG	72	
+091127	84	02:26:19.89	-18:57:08.5	0.55	U	Y		35	0.490	Y	host	73	
+091208B	32	01:57:34.10	+16:53:22.6	0.25	O	Y		*	1.0633	Y	AG	74	
+100305A	15	11:13:28.07	+42:24:14.3	1.00	X	N	Y	11		N			
+100615A	50	11:48:49.34	-19:28:52.0	0.70	X	N	Y	75	1.398	N	host	76	
+100621A	210	21:01:13.08	-51:06:22.5	0.40	I	Y	Y	77	0.542	Y	host	78	
+100728B	17	02:56:13.46	+00:16:52.1	0.52	U	Y		35	2.106	Y	AG	79	
+100802A	36	00:09:52.38	+47:45:18.8	0.50	O	Y		80	<3.1	N	host	*	
+100814A	90	01:29:53.59	-17:59:43.5	0.40	O	Y		*	1.44	Y	AG	81	
+110205A	170	10:58:31.10	+67:31:30.5	0.30	O	Y		82	2.22	Y	AG	83	
+110709B	94	10:58:37.11	-23:27:16.7	0.70	R	N	Y	84	2.09?	N	host	*	
+120119A	170	08:00:06.94	-09:04:53.8	0.30	O	Y	Y	85	1.728	Y	AG	85	
+120308A	12	14:36:20.05	+79:41:12.2	0.55	U	Y		35	<3.7	N	host	*	
+#
+#Notes.
+#a Swift-BAT prompt-emission fluence (15-150 keV) in units of 10-7 erg cm-2. From Sakamoto et al. (2011) if available, otherwise from the Swift GRB table.
+#b Best afterglow position (J2000), relative to the 2MASS astrometric system.
+#c Position uncertainty (arcsec), including an estimate of the systematic uncertainty.
+#d First letter of the wavelength at which the position was reported: X-ray, UV, optical, IR, or radio/millimeter.
+#e Whether or not a variable optical afterglow was reported. "IR" indicates that an NIR afterglow was reported but not an optical ($\lambda \lt 1\;\mu $m) afterglow. Blank if no observations were conducted or reported limits are very shallow.
+#f Whether the afterglow shows evidence of being dust-obscured and/or "dark," based on ${\beta }_{{\rm{OX}}}$ or the optical-NIR color. From a variety of sources, including Perley et al. (2013), Zafar et al. (2012), and Greiner et al. (2011).
+#g Whether or not a redshift estimate was promptly publicly available. (If "N," the redshift was measured by late-time observations of the host galaxy or only a limit could be provided.)
+#h Source of the redshift measurement/limit: observations of the optical afterglow (AG), of the host galaxy (host), or of the X-ray afterglow (${N}_{{\rm{H,X}}}$).
+#i References for the afterglow position (middle column) and redshift (right column), given below.
+#Sources as follows - *: This work, (1): Evans et al. 2009; (2): D. Malesani 2015, private communication; (3): Berger et al. 2005; (4): Mulchaey & Berger 2005; (5): Y. Urata 2015, private communication; (6): Fynbo et al. 2009b; (7): Foley et al. 2005; (8): D. Malesani et al. 2015, in preparation; (9): Cenko 2005; (10): Jakobsson et al. 2006; (11): Butler & Kocevski 2007; (12): Hjorth et al. 2012; (13): Kawai et al. 2006; (14): Jakobsson et al. 2005; (15): Kruhler et al. 2012; (16): Perley et al. 2013; (17): Guidorzi et al. 2006; (18): Mundell et al. 2006; (19): Mirabal & Halpern 2006; (20): Kruhler et al. 2015; (21): Price 2006; (22): Cenko et al. 2006a; (23): Levan et al. 2007; (24): Ruiz-Velasco et al. 2007; (25): Cenko & Fox 2006; (26): Perley et al. 2009c; (27): Rol et al. 2007; (28): Jaunsen et al. 2008; (29): Chen et al. 2007; (30): Jakobsson et al. 2007; (31): Bloom et al. 2007; (32): Castro-Tirado et al. 2007; (33): Bloom 2007; (34): Perley et al. 2010; (35): Swift GRB Table (36): Svensson et al. 2012; (37): Chornock et al. 2008; (38): Cenko 2008; (39): Hashimoto et al. 2010; (40): Hashimoto et al. 2015; (41): Rinner & Kugel 2008; (42): Cucchiara & Fox 2008; (43): Kruhler et al. 2008; (44): Cucchiara et al. 2008a; (45): D'Elia et al. 2008a; (46): T. Kruhler 2015, private communication; (47): D'Avanzo et al. 2008; (48): D'Elia et al. 2008b; (49): Berger & Rauch 2008; (50): Salvaterra et al. 2012; (51): Cucchiara et al. 2008b; (52): Chornock et al. 2009b; (53): Chornock et al. 2009d; (54): Castro-Tirado et al. 2009; (55): Berger & Fox 2009; (56): Pavlenko et al. 2009; (57): Chornock et al. 2009a; (58): Chornock et al. 2009c; (59): de Ugarte Postigo et al. 2009b; (60): Thone et al. 2009a; (61): Thone et al. 2009b; (62): Goldoni et al. 2013; (63): Cenko et al. 2009a; (64): Morgan et al. 2009; (65): Wiersema et al. 2009; (66): Cenko 2009; (67): de Ugarte Postigo et al. 2009a; (68): Jakobsson et al. 2009; (69): Fynbo et al. 2009a; (70): Chen et al. 2009; (71): Chornock et al. 2009e; (72): Rau et al. 2010; (73): Cucchiara et al. 2009; (74): Perley et al. 2009a; (75): Butler et al. 2010b; (76): Kruhler et al. 2013; (77): Updike et al. 2010; (78): Milvang-Jensen et al. 2010; (79): Flores et al. 2010; (80): de Ugarte Postigo et al. 2009d; (81): O'Meara et al. 2010; (82): Mundell et al. 2011; (83): Cenko et al. 2011; (84): Zauderer & Berger 2011; (85): Morgan et al. 2014.

@@ -1,0 +1,45 @@
+#     ALL UNITS ARE CGS UNLESS SPECIFIED OTHERWISE     #
+# ---------------------------------------------------- #
+# This is the input file for the param_search mode.    #
+# There is one file like this per quantity (L,z,Ep...) #
+# For each chosen model, please provide min and max of #
+# every parameter to explore.                          #
+# In the future (as of 10/10/16), provide also a step  #
+# for the MCMC.	       		  	       	       #
+# If you don't want to explore a certain parameter put #
+# the min and max values equal to each other.          #
+#
+# Peak Energy Model :                   
+# Explore (0 : False, 1 : True) :
+# ---------
+     1
+# ---------
+#
+# Check the GRB_pop.init file for which model is used !
+# 
+# (0) Fix       (2 args : Ep0_min, Ep0_max [keV])
+#
+# (1) LogNormal (4 args : Ep0_min, Ep0_max [keV],
+#     		   	  sigmaLog_min, sigmaLog_max)
+#
+# (2) Yonetoku  (To be implemented)
+#
+# (3) Amati     (8 args : Ep0_min, Ep0_max [keV],
+#                         sigmaLog_min, sigmaLog_max,
+#       		  L0_min, L0_max [erg/s],
+# 			  alpha_amati_min, alpha_amati_max)
+#
+# Note : in (3) default is (Ep0, sigmaLog, L0, alpha_amati) = (380, 0.2, 1.6E52, 0.43)
+#
+# args :                                
+# ---------
+10.
+10000.
+0.01
+1.5
+1.6E52
+1.6E52
+-0.1
+1.5
+# ---------
+#

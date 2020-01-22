@@ -1,0 +1,11 @@
+output_dir: 'debugger'
+
+Nb_GRBs: '1e5'
+
+samples: ['Stern', 'EpGBM', 'eBAT6', 'Swift', 'ECLAIRs', 'SHOALS']
+# , 'eBAT6', 'ECLAIRs', 'Swift', 'EpGBM', 'GBM_sample', 'Swift_bright', 'SHOALS']
+
+save_all_GRBs: False
+
+likelihood:
+  epsilon: 1.0E-3

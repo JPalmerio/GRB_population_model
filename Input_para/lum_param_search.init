@@ -1,0 +1,49 @@
+#     ALL UNITS ARE CGS UNLESS SPECIFIED OTHERWISE     #
+# ---------------------------------------------------- #
+# This is the input file for the param_search mode.    #
+# There is one file like this per quantity (L,z,Ep...) #
+# For each chosen model, please provide min and max of #
+# every parameter to explore.                          #
+# In the future (as of 10/10/16), provide also a step  #
+# for the MCMC.	       		  	       	       #
+# If you don't want to explore a certain parameter put #
+# the min and max values equal to each other.          #
+#
+# Luminosity Function :
+# Explore (0 : False, 1 : True) :
+# ---------
+     1
+# ---------
+#
+# Check the GRB_pop.init file for which model is used !
+#
+# (0) Fix              (2  args : L0_min, L0_max)
+#
+# (1) Power Law        (6  args : Lmin_min, Lmin_max,
+#                              	  Lmax_min, Lmax_max,
+#                              	  slope_min, slope_max)
+#
+# (2) Broken Power Law (10 args : Lmin_min, Lmin_max,
+#                                 Lmax_min, Lmax_max,
+#                                 Lbreak_min, Lbreak_max,
+#				  slopeLow_min, slopeLow_max,
+#				  slopeHigh_min, slopeHigh_max)
+#
+# NOTE : All L args are in [erg/s]
+#
+# args :                               
+# ---------
+5.d49
+5.d49
+1.d52
+1.d56
+#5.d49
+#1.d53
+0.3
+3.0
+#0.3
+#3.0
+0.5
+0.5
+# ---------
+#

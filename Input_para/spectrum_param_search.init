@@ -1,0 +1,40 @@
+#     ALL UNITS ARE CGS UNLESS SPECIFIED OTHERWISE     #
+# ---------------------------------------------------- #
+# This is the input file for the param_search mode.    #
+# There is one file like this per quantity (L,z,Ep...) #
+# For each chosen model, please provide min and max of #
+# every parameter to explore.                          #
+# In the future (as of 10/10/16), provide also a step  #
+# for the MCMC.	       		  	       	       #
+# If you don't want to explore a certain parameter put #
+# the min and max values equal to each other.          #
+#
+# Spectral Model :                      
+# Explore (0 : False, 1 : True) :
+# ---------
+     0
+# ---------
+#
+# Check the GRB_pop.init file for which model is used !
+#
+# (0) Fixed  Broken Power Law (4 args : alpha_min, alpha_max,
+#                                       beta_min, beta_max)
+#
+# (1) Kaneko Broken Power Law (0 args)
+#
+# (2) Fixed  Band Function    (4 args : alpha_min, alpha_max,
+#                                       beta_min, beta_max)
+#
+# (3) Kaneko Band Function    (0 args)
+#
+# (4) Daigne Band Function    (0 args)
+#
+# (5) Daigne Broken Power Law (0 args) # not implemented yet
+#
+# args :                                
+# ---------                               
+    1.
+    1.
+    2.2
+    2.2
+# ---------

@@ -1,0 +1,304 @@
+# ALL UNITS ARE CGS UNLESS SPECIFIED OTHERWISE #
+#
+# Path where outputs will be saved :
+# ----------------------------------
+191205_best_k1_LN_nF/
+# ----------------------------------
+#
+# Reprise mode (1 for yes):
+# ---------
+     0
+# ---------
+#
+# Random Number Generator :
+# ---------
+     0
+# ---------
+#
+# (0) for KISS
+# (1) for MT19937
+#
+# Run mode :
+# ---------
+     0
+# ---------
+#
+# (0) for One Run Mode (save all histograms)
+# (1) for Parameter Search mode (optimize speed, don't save histograms)
+# (2) for Post processing mode (recompute all good models and save constraints)
+# (3) for MCMC
+#
+# Note : in the case of param search mode (1), you need to look at the
+#        [property]_param_search.init files in the Input_para directory.
+#        You still need to provide the appropriate number of arguments
+#        in this file but they will be ignored.
+#
+#
+# -------------------------------------------- #
+# --------------- Model inputs --------------- #
+# -------------------------------------------- #
+#
+# Exponent of Number of GRB (int) :
+# ---------
+1.00+06
+# ---------
+#
+# Luminosity Function :                 
+# ---------
+     4
+# ---------
+#
+# (0) Fix                    (1 arg  : L0)
+# (1) Power Law              (3 args : Lmin, Lmax, slope)
+# (2) Evol. Broken Power Law (6 args : Lmin, Lmax, Lbreak, slopeLow, slopeHigh, k_evol)
+# (3) Evol. Power Law        (4 args : Lmin, Lmax, slope, k_evol)
+# (4) Schechter function     (3 args : Lmin, Lbreak, slope, k_evol)
+# NOTE : All L args are in [erg/s]
+#
+# args :                               
+# ---------
+5.0e+49
+3.6e+52
+1.41e+00
+#3.0e+51
+1.0
+#2.0
+# ---------
+#
+#
+# Redshift distribution :              
+# ---------                                            
+     8
+# ---------
+#
+# (0) Fix                  (1 arg  : z0)
+# (1) Uniform              (1 arg  : zmax)
+# (2) Springel-Hernquist   (4 args : zmax, zm, a, b)
+# (3) Daigne et al. 2006   (4 args : a, b, c, d)
+# (4) Xi evolution         (5 args : zmax, zm, a, b, zeta)
+# (5) Li 2008              (4 args : a, b, c, d)
+# (6) Pescalli et al. 2016 (0 args)
+# (7) Broken Power Law     (4 args : zmax, zm, a, b)      
+# (8) Broken Exponential   (4 args : zmax, zm, a, b)
+#
+# NOTE : in (2 and 4), b > 0 and (b-a) < 0
+#        default : (zmax, zm, a, b) = (20.0, 2.0, 2.37, 1.8) Vangioni+15
+#
+# NOTE : in (3) R(z) = k * SFR(z) and SFR(z) = a * EXP(bz)/(EXP(cz)+d)
+#                1) (a,b,c,d) = (0.320, 3.30, 3.52, 23.6)
+#                2) (a,b,c,d) = (0.196,  4.0,  4.0, 14.6)
+#                3) (a,b,c,d) = (0.175, 3.67, 3.48, 12.6)
+# NOTE : in (4) R(z) is the same as (2), times exp(zeta*z). To recover approximately (3), use : 
+#               1) zeta = 0.35
+#               2) zeta = 0.57
+#               3) zeta = 0.76
+#
+# NOTE : in (5) R(z) = k * SFR(z) and SFR(z) = (a + bz) / (1 + (z/c)**d)
+#        default : (a, b, c, d) = (0.0157, 0.118, 3.23, 4.66) Li 2008
+#
+# NOTE : in (8) default : (zmax, zm, a, b) = (20.0, 1.9, 1.1, -0.57) to recover closest SH Vangioni+15
+#
+# args :                               
+# --------- 
+20.0
+2.18
+0.94
+-0.52
+# ---------
+#
+# Spectral Shape :                      
+# ---------                                            
+     5
+# ---------
+#
+# (0) Fixed  Broken Power Law (2 args : alpha, beta)
+# (1) Kaneko Broken Power Law (0 args)
+# (2) Fixed  Band Function    (2 args : alpha, beta)
+# (3) Kaneko Band Function    (0 args)
+# (4) Preece Band Function    (0 args)
+# (5) GBM Band Function       (0 args)  
+#
+# args :                                
+# ---------                               
+#  0.6
+#  2.5
+# ---------
+#
+# Peak Energy Model :                   
+# ---------
+    1
+# ---------
+# 
+# (0) Fix        (1 arg  : Ep0 [keV])
+# (1) LogNormal  (2 args : Ep0 [keV], sigmaLog)
+# (2) Yonetoku   (deprecated)
+# (3) Amati-like (4 args : Ep0 [keV], sigmaLog, L0 [erg/s], alpha_amati)
+#
+# Note : in (3) default is : (380.,  0.2,   1.6E52, 0.43 ) Daigne+06
+#                       or : (370.5, 0.256, 1.6E52, 0.621) Lu+12
+#
+# args :                                
+# ---------
+6.90e+02
+4.5e-01
+#1.6E52
+#3.0e-01
+# ---------
+#
+#
+# -------------------------------------------- #
+# -------------- Include Sample -------------- #
+# -------------------------------------------- #
+#
+# Includes sample when value is 1 :
+#
+# Kommers :
+# --------
+     0
+# --------
+#
+# Preece :
+# --------
+     0
+# --------
+#
+# Stern :
+# --------
+     1
+# --------
+#
+# SWIFT weak :
+# --------
+     0
+# --------
+#
+# SWIFT :
+# --------
+     0
+# --------
+#
+# SWIFT bright :
+# --------
+     0
+# --------
+#
+# HETE2  :
+# --------
+     0
+# --------
+#
+# EpGBM  :
+# --------
+     1
+# --------
+#
+# eBAT6  :
+# --------
+     1
+# --------
+#
+# SVOM   :
+# --------
+     1
+# --------
+#
+# -------------------------------------------- #
+# ------------ Include Constraint ------------ #
+# -------------------------------------------- #
+#
+# Includes constraint when value is 1 :
+#
+# Kommers et al. 2000 :
+# --------
+     0
+# --------
+#
+# Preece et al 2000 :
+# --------
+     0
+# --------
+#
+# Stern et al 2001 :
+# --------
+     1 
+# --------
+#
+# XRF_HETE2 Daigne et al. 2006 :
+# --------
+     0
+# --------
+#
+# EpGBM Gruber et al. 2014 :
+# --------
+     1
+# --------
+#
+# eBAT6 Pescalli et al. 2016 :
+# --------
+     1
+# --------
+#
+# -------------------------------------------- #
+# --------------- Save options --------------- #
+# -------------------------------------------- #
+# 
+# Saves when the value is 1 :
+#
+# Luminosity :
+# --------
+     1
+# --------
+#
+# Redshift :
+# --------
+     1
+# --------
+#
+# Model Spec :
+# --------
+     1
+# --------
+#
+# Peak Energy :
+# --------
+     1
+# --------
+#
+# Peak Flux :
+# --------
+     1
+# --------
+#
+#
+# Constraints :
+# -------------
+#
+# Kommers et al. 2000 :
+# --------
+     0
+# --------
+#
+# Preece et al. 2000 :
+# --------
+     0
+# --------
+#
+# Stern et al. 2001 :
+# --------
+     1
+# --------
+#
+# XRF_HETE2 Daigne et al. 2006 :
+# --------
+     0
+# --------
+#
+# EpGBM Gruber et al. 2014 :
+# --------
+     1
+# --------
+#
+# eBAT6 Pescalli et al. 2016 :
+# --------
+     1
+# --------

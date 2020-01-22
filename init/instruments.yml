@@ -1,0 +1,23 @@
+name: ['BATSE','BAT','FREGATE','WXM','GBM', 'ECLAIRs','BATSE_5B']
+BATSE:
+  Emin: 50.  # keV
+  Emax: 300. # kev
+BAT:
+  Emin: 15.  # keV
+  Emax: 150. # keV
+FREGATE:
+  Emin: 30.  # keV
+  Emax: 400. # keV
+WXM:
+  Emin: 2.  # keV
+  Emax: 10. # keV
+GBM:
+  Emin: 10.    # keV
+  Emax: 1000. # keV
+ECLAIRs:
+  Emin: 4.   # keV
+  Emax: 150. # kev
+  n_sigma: 6.5
+BATSE_5B:
+  Emin: 20.    # keV
+  Emax: 2000.  # keV

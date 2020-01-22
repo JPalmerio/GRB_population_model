@@ -1,0 +1,5 @@
+This is a comparison between the old alpha and beta drawings which were based on the Gruber+14 catalog (extended by Bhat+16).
+The new values for alpha and beta come from the same catalog but which stricter criteria (notably the 'good' criteria from Gruber+14 which requires small errors on all parameters to ensure the fit is overall good and not just for one parameter).
+In addition, the requirement that 2 < beta < 5 was added (there are only 7 out of 310 bursts that have beta > 5 and all of them had the value of beta fixed during the fitting implying error=0, see the notebook 'alpha_beta_GBM_details' for more details).
+This new alpha and beta CDF is better because it is more acurate in terms of the parameters, the older version included values with large uncertainties which were not taken into account in the CDF (because the errors on the parameters are not taken into account when constructing the CDF).
+It doesn't significantly impact the results as is attested by the figure (it mostly affect the very low flux end of the distributions which aren't detected anyway) but it is more rigorous.

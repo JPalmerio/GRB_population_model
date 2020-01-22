@@ -1,0 +1,44 @@
+# name: ['Stern','Kommers','Preece','EpGBM','Swift','eBAT6','ECLAIRs','HETE2_FRE','HETE2_WXM']
+Stern:
+  instrument: 'BATSE'
+  pflx_min: 0.066825 # ph/s/cm2
+Kommers:
+  instrument: 'BATSE'
+  pflx_min: 0.18 # ph/s/cm2
+Preece:
+  instrument: 'BATSE'
+  pflx_min: 5.0 # ph/s/cm2
+EpGBM:
+  instrument: 'BATSE'
+  pflx_min: 0.9 # ph/s/cm2
+Swift:
+  instrument: 'BAT'
+  pflx_min: 0.2 # ph/s/cm2
+Swift_bright:
+  instrument: 'BAT'
+  pflx_min: 1.0 # ph/s/cm2
+eBAT6:
+  instrument: 'BAT'
+  pflx_min: 2.6 # ph/s/cm2
+ECLAIRs:
+  instrument: 'ECLAIRs'
+  pflx_min: 3.0e+3 # COUNTS !! cts/s
+HETE2_FRE:
+  instrument: 'FREGATE'
+  pflx_min: 1.0 # ph/s/cm2
+HETE2_WXM:
+  instrument: 'WXM'
+  pflx_min: 1.0 # ph/s/cm2
+SHOALS:
+  instrument: 'BAT'
+  pflx_min: 1.0e-6 # FLUENCE !! erg/cm2
+BATSE_5B_sample:
+  instrument: 'BATSE_5B'
+  pflx_min: 1. # ph/s/cm2
+GBM_sample:
+  instrument: 'GBM'
+  pflx_min: 3.0 # ph/s/cm2
+
+
+
+

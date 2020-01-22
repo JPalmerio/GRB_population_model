@@ -1,0 +1,44 @@
+#     ALL UNITS ARE CGS UNLESS SPECIFIED OTHERWISE     #
+# ---------------------------------------------------- #
+# This is the input file for the param_search mode.    #
+# There is one file like this per quantity (L,z,Ep...) #
+# For each chosen model, please provide min and max of #
+# every parameter to explore.                          #
+# In the future (as of 10/10/16), provide also a step  #
+# for the MCMC.	       		  	       	       #
+# If you don't want to explore a certain parameter put #
+# the min and max values equal to each other.          #
+#
+#
+# Redshift distribution :
+# Explore (0 : False, 1 : True) :             
+# ---------                                            
+     1
+# ---------
+#
+# Check the GRB_pop.init file for which model is used !
+#
+# (0) Fix                (2 args  : z0_min, z0_max)
+#
+# (1) Uniform            (2 args  : zmax_min, zmax_max)
+#
+# (2) Springel-Hernquist (8 args : zmax_min, zmax_max, zm_min, zm_max, a_min, a_max, b_min, b_max)
+#
+# (4) Xi evolution (SH)  (2 args : zeta_min, zeta_max)
+#
+# (7) Broken Power Law   (6 args : zm_min, zm_max, a_min, a_max, b_min, b_max)   
+#   
+# (8) Broken Exponential (6 args : zm_min, zm_max, a_min, a_max, b_min, b_max)
+#
+#
+#
+# args :                               
+# --------- 
+0.01
+6.0
+-3.0
+3.0
+-3.0
+3.0
+# ---------
+#
