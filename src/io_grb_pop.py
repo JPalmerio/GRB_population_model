@@ -2,6 +2,7 @@ import logging
 import yaml
 import datetime
 import numpy as np
+import pandas as pd
 from pathlib import Path
 
 log = logging.getLogger(__name__)
@@ -187,3 +188,15 @@ def read_column(filename, column_nb, end=None, dtype=float, array=True,
             log.warning("In read_column for %s. Could not convert string to %s, so added NaN." % (filename, dtype))
 
     return xdata
+
+
+def read_SHOALS_file(SHOALS_file=None):
+    if SHOALS_file is None:
+        SHOALS_file = root_dir/'catalogs/SHOALS_cat/SHOALS_cat.txt'
+
+    df_obs = pd.read_csv(SHOALS_file, sep='\t', header=3, low_memory=False)
+    keys = ['S_BAT', 'z']
+    for key in keys:
+        df_obs[key] = pd.to_numeric(df_obs[key], errors='coerce')
+    df_obs = df_obs.dropna()
+    return df_obs

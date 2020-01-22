@@ -3,12 +3,175 @@ import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
 import matplotlib
+import observational_constraints as obs
+import stats as st
+from io_grb_pop import root_dir
+import io_grb_pop as io
 from matplotlib import gridspec
 
 try:
     plt.style.use('presentation')
 except Exception:
     pass
+
+
+def double_array(array_in):
+    """
+        Convenience function to duplicate the consecutive rows in an
+        array to make it easy to plot.
+    """
+    array_out = np.zeros(2*len(array_in))
+    for i in range(len(array_in)):
+        array_out[2*i] = array_in[i]
+        array_out[2*i+1] = array_in[i]
+    return array_out
+
+
+def plottable_hist(x_in, y_in, last_bin_edge):
+    """
+        Convenience function to create a plottable pair of x,y arrays
+        - x is the left edge of the bins so last_bin_edge must be
+        provided
+        - y[i] is the histogram value between x[i] and x[i+1]
+        The output can be easily plotted.
+        Example:
+        x = [0,1,2]; last_bin_edge = 3
+        y = [2,4,3]
+        ----> x_out = [0,1,1,2,2,3] y_out = [2,2,4,4,3,3]
+    """
+    if len(x_in) != len(y_in):
+        print("[ERROR] in plottable_hist: x and y have different lenths : {} and {}".format(len(x_in), len(y_in)))
+        raise IOError
+
+    x_out = double_array(x_in)
+    y_out = double_array(y_in)
+
+    x_out[1:-1] = x_out[2:]
+    x_out[0] = x_in[0]
+    x_out[-1] = last_bin_edge
+
+    return x_out, y_out
+
+
+def xerr_from_bins(bins, log=False):
+    """
+        Convenience function to easily calculate the x_err from bins to
+        represent a histogram as crosses on a plot
+        returns:
+        - x the middle point of the bin in the x direction
+        - x_errp the extent of the bin from x up to the right bin edge
+        - x_errm the extent of the bin from x down to the left bin edge
+    """
+    if log:
+        x = np.sqrt(bins[1:] * bins[:-1])
+    else:
+        x = 0.5 * (bins[1:] + bins[:-1])
+
+    x_errp = bins[1:] - x
+    x_errm = x - bins[:-1]
+
+    return x, x_errp, x_errm
+
+
+def plot_EpGBM(fname=None, log=True, density=False, ax=None, **kwargs):
+    """
+        Convenience function to plot the EpGBM constraint on a given ax
+    """
+    if fname is None:
+        fname = root_dir/'observational_constraints/Ep_GBM_for_plotting.txt'
+    if ax is None:
+        ax = plt.gca()
+    bins, obs_lin, err_lin = obs.create_EpGBM_hist(fname, density=density)
+
+    x, x_errp, x_errm = xerr_from_bins(bins, log=log)
+
+    ax.errorbar(x, obs_lin, xerr=[x_errm, x_errp], yerr=err_lin, **kwargs)
+
+    return
+
+
+def plot_SHOALS_distr(df_mod, key, SHOALS_file=None, cumul=False, fig=None, plot_obs=True,
+                      mod_color='C0', mod_label='Model', bins=None):
+
+    if fig is None:
+        fig, ax = plt.subplots(figsize=(10,8))
+    else:
+        ax = fig.axes[0]
+
+    df_obs = io.read_SHOALS_file(SHOALS_file)
+    if cumul:
+        if plot_obs:
+            if key == 'S_BAT':
+                data_obs = np.log10(df_obs[key].to_numpy())
+            else:
+                data_obs = df_obs[key].to_numpy()
+
+            x_obs, cdf_obs = st.unbinned_empirical_cdf(data_obs)
+            ax.plot(x_obs, cdf_obs, color='C5', drawstyle='steps-post', label='SHOALS observed', lw=3)
+
+        x_mod, cdf_mod = st.unbinned_empirical_cdf(df_mod.to_numpy())
+        ax.plot(x_mod, cdf_mod, color=mod_color, drawstyle='steps-post', label=mod_label)
+
+        ax.legend()
+        ax.set_ylabel('CDF')
+        ax.set_ylim(0,1)
+    else:
+        if (bins is None) and (key == 'z'):
+            bins = np.linspace(0,7,15)
+        if plot_obs:
+            sns.kdeplot(df_obs[key], ax=ax, label='SHOALS observed', color='C5')
+            ax.hist(df_obs[key], color='C5', bins=bins, density=True, alpha=0.7)
+
+        sns.kdeplot(df_mod, ax=ax, label='Model', color=mod_color)
+        ax.hist(df_mod, color=mod_color, bins=bins, density=True, alpha=0.7)
+
+        ax.set_ylabel('PDF')
+    if key == 'z':
+        ax.set_xlabel('Redshift (z)')
+        ax.set_xlim(0,8)
+    return
+
+
+def plot_constraint(constraint, bins, mod, obs, err, plot_mod=True, plot_obs=True, log=True, ax=None):
+    """
+        Convenience function to quickly plot the various constraints
+        used in the population model
+        The histograms are doubled for plotting (easier...)
+    """
+    if constraint not in ['Stern', 'EpGBM', 'eBAT6']:
+        raise ValueError("constraint must be one of {}".format(['Stern', 'EpGBM', 'eBAT6']))
+
+    x, x_errp, x_errm = xerr_from_bins(bins, log=log)
+
+    if ax is None:
+        fig, ax = plt.subplots()
+
+    if plot_mod:
+        x1, mod_to_plot = plottable_hist(bins[:-1], mod, last_bin_edge=bins[-1])
+        ax.plot(x1, mod_to_plot, drawstyle='steps-post', label='Model', lw=2)
+
+    if plot_obs:
+        x1, obs_to_plot = plottable_hist(bins[:-1], obs, last_bin_edge=bins[-1])
+        ax.errorbar(x, obs, xerr=[x_errm, x_errp], yerr=err,
+                    capsize=0, label='Observations', fmt='.', color='k')
+
+    if constraint == 'Stern':
+        ax.set_yscale('log')
+        ax.set_xscale('log')
+        ax.set_xlabel(r'Peak flux $\rm{[ph\,cm^{-2}\,s^{-1}\,50-300\,keV]}$')
+        ax.set_ylabel(r'$\Delta N/\Delta \,(\rm{log\,}P)\,\rm{[yr^{-1}] }$ in $4\pi$')
+    elif constraint == 'EpGBM':
+        ax.set_xlabel(r'Peak Energy $\rm{[keV]}$')
+        ax.set_ylabel(r'Number of GRBs')
+        ax.set_xlim([13.,10000.])
+        ax.set_ylim([0.,350.])
+        ax.set_xscale('log')
+    elif constraint == 'eBAT6':
+        ax.set_xlabel('Redshift(z)')
+        ax.set_ylabel(r'Number of GRBs')
+        ax.set_xlim([0.01, 6.])
+    ax.legend()
+    return
 
 
 def fig_marg(figsize=(7, 6), cb=True):
