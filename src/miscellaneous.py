@@ -88,16 +88,18 @@ def lin_to_log_ndarray(x):
     return log_x
 
 
-def filter_df(df, filtering_key, lim_min=None, lim_max=None):
+def filter_df(df, filtering_key, lim_min=None, lim_max=None, equal=None, errors='raise', strip=None, string=False):
     """
         Filter a df using a criteria based on filtering_key
     """
+    if not string:
+        df[filtering_key] = pd.to_numeric(df[filtering_key], errors=errors)
+    else:
+        df[filtering_key] = df[filtering_key].str.strip(strip)
 
-    df[filtering_key] = pd.to_numeric(df[filtering_key], errors='coerce')
-
-    if (lim_min is None) and (lim_max is None):
+    if (lim_min is None) and (lim_max is None) and (equal is None):
         raise ValueError
-    elif (lim_min is not None) and (lim_max is not None):
+    elif (lim_min is not None) and (lim_max is not None) and (equal is None):
         cond_min = df[filtering_key] >= lim_min
         cond_max = df[filtering_key] <= lim_max
         cond = cond_min & cond_max
@@ -105,6 +107,14 @@ def filter_df(df, filtering_key, lim_min=None, lim_max=None):
         cond = df[filtering_key] >= lim_min
     elif lim_max is not None:
         cond = df[filtering_key] <= lim_max
+    elif equal is not None:
+        cond = df[filtering_key] == equal
+    else:
+        print("lim_min = {}".format(lim_min))
+        print("lim_max = {}".format(lim_max))
+        print("equal = {}".format(equal))
+        raise ValueError("You cannot provide all these arguments. Filtering must be "
+                         "lim_min and/or lim_max OR equal")
     df_out = df[cond].copy()
     return df_out
 

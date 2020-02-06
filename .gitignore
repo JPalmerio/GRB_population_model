@@ -1,3 +1,4 @@
 Model_outputs/*
 src/.ipynb_checkpoints
 src/__pycache__
+catalogs/.ipynb_checkpoints

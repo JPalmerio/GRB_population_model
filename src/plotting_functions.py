@@ -337,7 +337,7 @@ def cool_hist2d(x, y, c=None, mode='scatter', xlabel=None, ylabel=None, cb=True,
 
 
 def plot_obs_property(fname, key, func=None, func_args={}, ax=None, log=False, kde=True,
-                      header=2, verbose=False, debug=False, **kwargs):
+                      header=2, verbose=False, debug=False, errors='raise', **kwargs):
     """
         Convenience function to quickly plot an observed sample from a given file name.
         A function to filter or cut the sample can be passed as func.
@@ -353,7 +353,7 @@ def plot_obs_property(fname, key, func=None, func_args={}, ax=None, log=False, k
 
     # Apply function to the data
     if func is None:
-        df_prop = pd.to_numeric(df_obs[key], errors='coerce')
+        df_prop = pd.to_numeric(df_obs[key], errors=errors)
     # If func is a list, iterate through the list and apply each function
     elif isinstance(func, list):
         if not isinstance(func_args, list):
@@ -361,13 +361,13 @@ def plot_obs_property(fname, key, func=None, func_args={}, ax=None, log=False, k
         df_prop = df_obs.copy()
         for i, func_i in enumerate(func):
             df_prop = func_i(df_prop, **func_args[i])
-        df_prop = df_prop[key]
+        df_prop = pd.to_numeric(df_prop[key], errors=errors)
     else:
         df_prop = func(df_obs.copy(), **func_args)
-        df_prop = df_prop[key]
+        df_prop = pd.to_numeric(df_prop[key], errors=errors)
 
     if log:
-        df_prop = pd.to_numeric(df_prop, errors='coerce')
+        df_prop = pd.to_numeric(df_prop, errors=errors)
         df_prop = np.log10(df_prop)
     if verbose:
         print("Sample size :{}".format(len(df_prop)))

@@ -15,7 +15,7 @@ except ImportError:
 
 
 def Eiso(L, z, Cvar, t90obs, Ep, alpha, beta, ktild, Emin, Emax,
-         Nb_GRBs=1, precision=100, f90=True, **extra_args):
+         precision=100, f90=True, **extra_args):
     """
         Returns the source frame isotropic equivalent energy in [erg]
         between Emin and Emax.
@@ -25,6 +25,11 @@ def Eiso(L, z, Cvar, t90obs, Ep, alpha, beta, ktild, Emin, Emax,
         Emin : keV   (SOURCE !!! frame)
         Emax : keV   (SOURCE !!! frame)
     """
+    try:
+        Nb_GRBs = len(L)
+    except TypeError:
+        Nb_GRBs = 1
+
     if Nb_GRBs > 1:
         xmin = Emin/Ep
         xmax = Emax/Ep
@@ -105,7 +110,7 @@ def xBtild(x, ktild, alpha, beta, spec='Band'):
 
 
 def Pht_flux(L, z, Ep, D_L, alpha, beta, ktild, Emin, Emax,
-             Nb_GRBs=1, precision=100, f90=True, **extra_args):
+             precision=100, f90=True, **extra_args):
     """
         Returns the photon flux in [ph/cm2/s] between Emin and Emax.
         L    : erg/s
@@ -114,6 +119,10 @@ def Pht_flux(L, z, Ep, D_L, alpha, beta, ktild, Emin, Emax,
         Emin : keV   (observer frame)
         Emax : keV   (observer frame)
     """
+    try:
+        Nb_GRBs = len(L)
+    except TypeError:
+        Nb_GRBs = 1
 
     if Nb_GRBs > 1:
         xmin = (1.+z)*Emin/Ep
@@ -141,7 +150,7 @@ def Pht_flux(L, z, Ep, D_L, alpha, beta, ktild, Emin, Emax,
 
 
 def Erg_flux(L, z, Ep, D_L, alpha, beta, ktild, Emin, Emax,
-             Nb_GRBs=1, precision=100, f90=True, **extra_args):
+             precision=100, f90=True, **extra_args):
     """
         Returns the energy flux in [erg/cm2/s] between Emin and Emax.
         L    : erg/s
@@ -150,6 +159,10 @@ def Erg_flux(L, z, Ep, D_L, alpha, beta, ktild, Emin, Emax,
         Emin : keV   (observer frame)
         Emax : keV   (observer frame)
     """
+    try:
+        Nb_GRBs = len(L)
+    except TypeError:
+        Nb_GRBs = 1
 
     if Nb_GRBs > 1:
         xmin = (1.+z)*Emin/Ep
@@ -177,7 +190,7 @@ def Erg_flux(L, z, Ep, D_L, alpha, beta, ktild, Emin, Emax,
 
 
 def Cts_flux_ECLAIRs(L, z, Ep, D_L, alpha, beta, ktild, Emin, Emax, eff_area_A_tot, eff_area_E_tot,
-                     Nb_GRBs=1, precision=100, f90=True, **extra_args):
+                     precision=100, f90=True, **extra_args):
     """
         Calculate the number of counts per second per square centimeter
         [cts/cm2/s] between Emin and Emax.
@@ -193,6 +206,10 @@ def Cts_flux_ECLAIRs(L, z, Ep, D_L, alpha, beta, ktild, Emin, Emax, eff_area_A_t
         Emin : keV
         Emax : keV
     """
+    try:
+        Nb_GRBs = len(L)
+    except TypeError:
+        Nb_GRBs = 1
 
     if Nb_GRBs > 1:
         xmin = (1.+z)*Emin/Ep
@@ -223,7 +240,7 @@ def Cts_flux_ECLAIRs(L, z, Ep, D_L, alpha, beta, ktild, Emin, Emax, eff_area_A_t
 
 
 def Erg_flux_ECLAIRs(L, z, Ep, D_L, alpha, beta, ktild, Emin, Emax, eff_area_A_tot, eff_area_E_tot,
-                     Nb_GRBs=1, precision=100, f90=True, **extra_args):
+                     precision=100, f90=True, **extra_args):
     """
         Calculate the amount of energy per second per square centimeter
         [erg/cm2/s] between Emin and Emax.
@@ -239,6 +256,10 @@ def Erg_flux_ECLAIRs(L, z, Ep, D_L, alpha, beta, ktild, Emin, Emax, eff_area_A_t
         Emin : keV   (observer frame)
         Emax : keV   (observer frame)
     """
+    try:
+        Nb_GRBs = len(L)
+    except TypeError:
+        Nb_GRBs = 1
 
     if Nb_GRBs > 1:
         xmin = (1.+z)*Emin/Ep
@@ -429,16 +450,13 @@ def calc_det_prob(GRB_prop, incl_samples, **ECLAIRs_args):
     """
 
     log.debug("Starting calculations of detection probability...")
+    Nb_GRBs = len(GRB_prop['z'])
 
     for name, properties in incl_samples.items():
         instr_name = properties['instrument']
 
         log.debug(f"{name} sample:")
         t1 = time.time()
-
-        # if name == 'Stern':
-        #     pflx = GRB_prop['_'.join(['pht_pflx', instr_name])]
-        #     GRB_prop['_'.join(['pdet', name])] = efficiency_correction_Stern(pflx)
 
         if name == 'ECLAIRs':
             cts = GRB_prop['_'.join(['pht_cts', instr_name])]
@@ -455,15 +473,15 @@ def calc_det_prob(GRB_prop, incl_samples, **ECLAIRs_args):
             erg_flnc = GRB_prop['_'.join(['erg_flnc', instr_name])]
             condition = (erg_flnc >= properties['pflx_min'])
             GRB_prop['_'.join(['pdet', name])] = np.where(condition,
-                                                          np.ones(GRB_prop['Nb_GRBs']),
-                                                          np.zeros(GRB_prop['Nb_GRBs']))
+                                                          np.ones(Nb_GRBs),
+                                                          np.zeros(Nb_GRBs))
         else:
             pflx = GRB_prop['_'.join(['pht_pflx', instr_name])]
             condition = (pflx >= properties['pflx_min'])
 
             GRB_prop['_'.join(['pdet', name])] = np.where(condition,
-                                                          np.ones(GRB_prop['Nb_GRBs']),
-                                                          np.zeros(GRB_prop['Nb_GRBs']))
+                                                          np.ones(Nb_GRBs),
+                                                          np.zeros(Nb_GRBs))
         t2 = time.time()
         log.debug(f"Done in {t2-t1:.3f} s")
 

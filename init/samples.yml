@@ -1,43 +1,43 @@
 # name: ['Stern','Kommers','Preece','EpGBM','Swift','eBAT6','ECLAIRs','HETE2_FRE','HETE2_WXM']
 Stern:
   instrument: 'BATSE'
-  pflx_min: 0.066825 # ph/s/cm2
+  pflx_min: 0.066825 # ph/s/cm2 in 50-300 keV
 Kommers:
   instrument: 'BATSE'
-  pflx_min: 0.18 # ph/s/cm2
+  pflx_min: 0.18 # ph/s/cm2 in 50-300 keV
 Preece:
   instrument: 'BATSE'
-  pflx_min: 5.0 # ph/s/cm2
+  pflx_min: 5.0 # ph/s/cm2 in 50-300 keV
 EpGBM:
   instrument: 'BATSE'
-  pflx_min: 0.9 # ph/s/cm2
+  pflx_min: 0.9 # ph/s/cm2 in 50-300 keV
 Swift:
   instrument: 'BAT'
-  pflx_min: 0.2 # ph/s/cm2
+  pflx_min: 0.2 # ph/s/cm2 in 15-150 keV
 Swift_bright:
   instrument: 'BAT'
-  pflx_min: 1.0 # ph/s/cm2
+  pflx_min: 1.0 # ph/s/cm2 in 15-150 keV
 eBAT6:
   instrument: 'BAT'
-  pflx_min: 2.6 # ph/s/cm2
+  pflx_min: 2.6 # ph/s/cm2 in 15-150 keV
 ECLAIRs:
   instrument: 'ECLAIRs'
-  pflx_min: 3.0e+3 # COUNTS !! cts/s
+  pflx_min: 3.0e+3 # COUNTS !! cts/s in 4-120 keV (or 150 keV)
 HETE2_FRE:
   instrument: 'FREGATE'
-  pflx_min: 1.0 # ph/s/cm2
+  pflx_min: 1.0 # ph/s/cm2 in 30-400 keV
 HETE2_WXM:
   instrument: 'WXM'
-  pflx_min: 1.0 # ph/s/cm2
+  pflx_min: 1.0 # ph/s/cm2 in 2-10 keV
 SHOALS:
   instrument: 'BAT'
-  pflx_min: 1.0e-6 # FLUENCE !! erg/cm2
+  pflx_min: 1.0e-6 # FLUENCE !! erg/cm2 in 15-150 keV
 BATSE_5B_sample:
   instrument: 'BATSE_5B'
-  pflx_min: 1. # ph/s/cm2
+  pflx_min: 1. # ph/s/cm2 in 20-2000 keV
 GBM_sample:
   instrument: 'GBM'
-  pflx_min: 3.0 # ph/s/cm2
+  pflx_min: 3.0 # ph/s/cm2 in 10-1000 keV
 
 
 

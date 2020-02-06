@@ -19,7 +19,7 @@ except ImportError:
 class GRBPopulation:
     def __init__(self, Nb_GRBs, output_dir=None):
         self.Nb_GRBs = Nb_GRBs
-        self.properties = {'Nb_GRBs':Nb_GRBs}
+        self.properties = pd.DataFrame({})
         if output_dir is None:
             self.output_dir = Path().cwd()
         else:

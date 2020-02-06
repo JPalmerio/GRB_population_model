@@ -2,7 +2,7 @@ output_dir: 'debugger'
 
 Nb_GRBs: '1e5'
 
-samples: ['Stern', 'EpGBM', 'eBAT6', 'Swift', 'ECLAIRs', 'SHOALS']
+samples: [ 'GBM_sample', 'BATSE_5B_sample']
 # , 'eBAT6', 'ECLAIRs', 'Swift', 'EpGBM', 'GBM_sample', 'Swift_bright', 'SHOALS']
 
 save_all_GRBs: False
