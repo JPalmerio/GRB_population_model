@@ -3,7 +3,6 @@ import scipy.integrate as integrate
 import logging
 import constants as cst
 import time
-from observational_constraints import efficiency_correction_Stern
 
 log = logging.getLogger(__name__)
 

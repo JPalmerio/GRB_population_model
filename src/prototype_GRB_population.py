@@ -8,8 +8,7 @@ import sys
 import pandas as pd
 import physics as ph
 import io_grb_pop as io
-import miscelaneous as msc
-import observational_constraints as obs
+import miscellaneous as msc
 from GRB_population import GRBPopulation
 from cosmology import init_cosmology
 from ECLAIRs import init_ECLAIRs

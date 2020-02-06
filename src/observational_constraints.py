@@ -1,7 +1,7 @@
 import numpy as np
 import plotting_functions as pf
 from io_grb_pop import read_column, root_dir
-from miscelaneous import chi2_func, log_to_lin
+from miscellaneous import chi2_func, log_to_lin
 import logging
 
 log = logging.getLogger(__name__)
@@ -38,7 +38,7 @@ def create_Stern_hist(fname=None, verbose=False):
     return bins, hist, err
 
 
-def create_EpGBM_hist(fname=None, verbose=False, density=False):
+def create_EpGBM_hist(fname=None, verbose=False, density=False, bins_log=True):
     """
         Create the histogram from Gruber et al. 2014 catalog of GBM
         bursts with a pflx cut of 0.9 ph/s/cm2
@@ -58,6 +58,11 @@ def create_EpGBM_hist(fname=None, verbose=False, density=False):
         N_EpGBM = hist.sum()
         delta_bin = np.log10(bins[1:]/bins[:-1])
         hist /= (N_EpGBM * delta_bin)
+        err /= (N_EpGBM * delta_bin)
+
+    if bins_log:
+        bins = np.log10(bins)
+
     if verbose:
         ln_oi = 0.
         for i, val in enumerate(hist):
@@ -89,16 +94,6 @@ def create_eBAT6_hist(fname=None, verbose=False, eBAT6_weight=10):
         print(f"ln(o_i!) = {ln_oi} from eBAT6 histogram")
 
     return bins, hist, err
-
-
-def plot_EpL_plane(GRB_pop, sample='eBAT6'):
-    """
-        Plot the GRB population in the Ep-L plane
-    """
-    fig, axes = pf.fig_marg()
-    mini_cbax = fig.add_axes([0.780, 0.125, 0.015, 0.20])
-    raise NotImplementedError
-    return
 
 
 def global_GRB_rate_Stern(Stern_file):
