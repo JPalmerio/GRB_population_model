@@ -188,8 +188,9 @@ def read_data(filename, column_nb, end=None, err=True, dtype=float, single_err=F
     """
     Helper function that reads a table and returns the data, with errors and upper or lower limits.
     If err is True it assumes format of file is :     1) data     2) error plus     3) error minus
+    If err is False, it sets them to 0.
     If single_err is True it assumes format of file is : 1) data     2) error
-    If there is no data, or if you ask for no errors, it fills the errors with NaN.
+    If there is no data it fills the errors with NaN.
     Otherwise if the data exists but it doesn't find errors it will set them to 0.
     Upper and lower limits and converted to 1 for True, and 0 for False in the requested dtype.
     Returns data as a list of numpy.ndarray with by default:
@@ -309,8 +310,8 @@ def read_data(filename, column_nb, end=None, err=True, dtype=float, single_err=F
                         if verbose:
                             print("[Warning] in read_data : Couldn't convert %s to %s for column %d, line %d in file %s. Replacing with NaN." % (columns[column_nb], dtype,column_nb, i, filename))
                         data[0].append(np.nan)
-                    data[1].append(None)  # error plus
-                    data[2].append(None)  # error minus
+                    data[1].append(0.0)  # error plus
+                    data[2].append(0.0)  # error minus
 
                 except IndexError:
                     # print 'Warning : No data found for column %d, line %d in file %s. Input will be None.' %(column_nb, i, filename)

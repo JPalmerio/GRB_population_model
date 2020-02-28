@@ -93,12 +93,10 @@ def plot_EpGBM(fname=None, log=True, density=False, ax=None, **kwargs):
 
 
 def plot_SHOALS_distr(df_mod, key, SHOALS_file=None, cumul=False, ax=None, plot_obs=True,
-                      mod_color='C0', mod_label='Model', bins=None, log=False):
+                      mod_color='C0', mod_label='Model', bins=None, log=False, **kwargs):
 
     if ax is None:
         fig, ax = plt.subplots(figsize=(10,8))
-    else:
-        ax = fig.axes[0]
 
     df_obs = io.read_SHOALS_file(SHOALS_file)
     data_obs = df_obs[key].to_numpy()
@@ -114,7 +112,7 @@ def plot_SHOALS_distr(df_mod, key, SHOALS_file=None, cumul=False, ax=None, plot_
             ax.plot(x_obs, cdf_obs, color='C5', drawstyle='steps-post', label='SHOALS observed', lw=3)
 
         x_mod, cdf_mod = st.unbinned_empirical_cdf(df_mod)
-        ax.plot(x_mod, cdf_mod, color=mod_color, drawstyle='steps-post', label=mod_label)
+        ax.plot(x_mod, cdf_mod, color=mod_color, drawstyle='steps-post', label=mod_label, **kwargs)
 
         ax.legend()
         ax.set_ylabel('CDF')
@@ -125,7 +123,7 @@ def plot_SHOALS_distr(df_mod, key, SHOALS_file=None, cumul=False, ax=None, plot_
             ax.hist(df_obs[key], color='C5', bins=bins, density=True, alpha=0.7)
 
         sns.kdeplot(df_mod, ax=ax, label='Model', color=mod_color)
-        ax.hist(df_mod, color=mod_color, bins=bins, density=True, alpha=0.7)
+        ax.hist(df_mod, color=mod_color, bins=bins, density=True, alpha=0.7, **kwargs)
 
         ax.set_ylabel('PDF')
     return
@@ -260,8 +258,8 @@ def scatter_incomplete_ndarray(ax, x, y, colormap=None, x_is_log=False, y_is_log
     return scatterplot
 
 
-def fig_marg(figsize=(7, 6), cb=True):
-    fig = plt.figure(figsize=figsize)
+def fig_marg(figsize=(7, 6), cb=True, **kwargs):
+    fig = plt.figure(figsize=figsize, **kwargs)
 
     if cb:
         ax_center = fig.add_axes([0.25, 0.10, 0.60, 0.70])
@@ -300,7 +298,9 @@ def cool_hist2d(x, y, c=None, mode='scatter', xlabel=None, ylabel=None, cb=True,
                                  'bins': 20,
                                  'color': 'lightgrey',
                                  'edgecolor':'k'},
-                cbar_kwargs={}, hist2d_kwargs={},
+                cbar_kwargs={},
+                hist2d_kwargs={},
+                kde2d_kwargs={},
                 **kwargs):
     if fig is None:
         fig, axes = fig_marg(figsize=figsize, cb=cb)
@@ -317,8 +317,11 @@ def cool_hist2d(x, y, c=None, mode='scatter', xlabel=None, ylabel=None, cb=True,
         art = axes['center'].scatter(x, y, c=c, edgecolor='k', **kwargs)
     elif mode == 'hist2d':
         corner.hist2d(x, y, ax=axes['center'], **hist2d_kwargs)
+    elif mode == 'kde2d':
+        sns.kdeplot(x, y, ax=axes['center'], **kde2d_kwargs)
     else:
         raise ValueError('Wrong input for mode in cool_hist2d. Please chose "scatter" or "hist2d"')
+
     if plot_left_kdeplot:
         sns.kdeplot(y, ax=axes['left'], vertical=True, **left_kdeplot_kwargs)
     if plot_top_kdeplot:
@@ -327,8 +330,10 @@ def cool_hist2d(x, y, c=None, mode='scatter', xlabel=None, ylabel=None, cb=True,
         axes['left'].hist(y, orientation='horizontal', density=True, **left_hist_kwargs)
     if plot_top_hist:
         axes['top'].hist(x, density=True, **top_hist_kwargs)
+
     axes['center'].set_xlabel(xlabel)
     axes['left'].set_ylabel(ylabel)
+
     if cb and c is not None:
         cb = fig.colorbar(art, cax=axes['cb'], **cbar_kwargs)
     if cb and cblabel is not None:
@@ -370,14 +375,14 @@ def plot_obs_property(fname, key, func=None, func_args={}, ax=None, log=False, k
         df_prop = pd.to_numeric(df_prop, errors=errors)
         df_prop = np.log10(df_prop)
     if verbose:
-        print("Sample size :{}".format(len(df_prop)))
+        print("Sample size :{}".format(len(df_prop.dropna())))
     if ax is None:
         ax = plt.gca()
 
     ax.hist(df_prop, **kwargs)
     if kde:
         sns.kdeplot(df_prop, ax=ax, color='k', linewidth=2, label='KDE')
-    return
+    return df_prop
 
 
 def plot_eBAT6_EpL(fname=None, axes=None, fname_lim=None, mini_cax=False, kde=False):
@@ -516,3 +521,102 @@ def plot_CDFs_and_KS_results(bins, med1, med2, lw1, lw2, up1, up2, D_stat, p_val
     plot_CDF_with_bounds(bins_mid, med2, lw2, up2, ax=ax, label=label2)
     ax.set_ylim(0,1)
     return
+
+
+def plot_ndarray_unbinned_cdf_with_limits(ax, data, x_is_log=False, arrow_size=None, **kwargs):
+    """
+        Helper function to quickly plot a cumulative distribution including limits.
+        The input is expected to come from read_data
+        i.e. : x[0] = data (float)
+           x[1] = error plus (float)
+           x[2] = error minus (float)
+           x[3] = upper limit (bool)
+           x[4] = lower limit (bool)
+        Returns the artist associated with the plotted line
+    """
+    mask = np.isfinite(data[0])
+    masked_data = msc.mask_ndarray(data, mask)
+    sorted_data = msc.sort_ndarray(masked_data)
+    w_ul = np.where(sorted_data[3] == 1)[0]
+    w_ll = np.where(sorted_data[4] == 1)[0]
+
+    _unused, ECDF = st.unbinned_empirical_cdf(sorted_data[0])
+
+    artist, = ax.plot(sorted_data[0], ECDF, drawstyle='steps-post', **kwargs)
+
+    # Add the first and last line to make the plot look better
+    plot_color = plt.getp(artist, 'color')
+    plot_ls = plt.getp(artist, 'linestyle')
+    plot_lw = plt.getp(artist, 'linewidth')
+    xmin = sorted_data[0,0]
+    xmax = sorted_data[0,-1]
+    bottom_line = matplotlib.lines.Line2D([xmin,xmin], [0,ECDF[0]], color=plot_color, linestyle=plot_ls, linewidth=plot_lw)
+    ax.add_line(bottom_line)
+    top_line = matplotlib.lines.Line2D([xmax, (2*xmax-sorted_data[0,-2])], [ECDF[-1],ECDF[-1]], color=plot_color, linestyle=plot_ls, linewidth=plot_lw)
+    ax.add_line(top_line)
+
+    if x_is_log:
+        if arrow_size is None:
+            arrow_size = [0.3, 0.8]
+        arrow_length = np.ones(len(sorted_data[0]))
+        arrow_length[w_ul] = sorted_data[0, w_ul] * arrow_size[0]
+        arrow_length[w_ll] = sorted_data[0, w_ll] * arrow_size[1]
+    else:
+        if arrow_size is None:
+            arrow_size = 0.1
+        arrow_length = np.ones(len(sorted_data[0]))*(xmax-xmin) * arrow_size
+    # Add upper limits
+    for i in range(len(w_ul)):
+        if w_ul[i] > 0:
+            ax.arrow(sorted_data[0, w_ul[i]], 0.5*(ECDF[w_ul[i]]+ECDF[w_ul[i]-1]), -arrow_length[w_ul[i]], 0,
+                     fc=plot_color, ec=plot_color, head_width=0.01, head_length=0.1*arrow_length[w_ul[i]])
+        else:
+            ax.arrow(sorted_data[0, w_ul[i]], 0.5*(ECDF[w_ul[i]]), -arrow_length[w_ul[i]], 0,
+                     fc=plot_color, ec=plot_color, head_width=0.01, head_length=0.1*arrow_length[w_ul[i]])
+    # and lower limits
+    for i in range(len(w_ll)):
+        if w_ll[i] > 0:
+            ax.arrow(sorted_data[0, w_ll[i]], 0.5*(ECDF[w_ll[i]]+ECDF[w_ll[i]-1]), arrow_length[w_ll[i]], 0,
+                     fc=plot_color, ec=plot_color, head_width=0.01, head_length=0.1*arrow_length[w_ll[i]])
+        else:
+            ax.arrow(sorted_data[0, w_ll[i]], 0.5*(ECDF[w_ll[i]]), arrow_length[w_ll[i]], 0,
+                     fc=plot_color, ec=plot_color, head_width=0.01, head_length=0.1*arrow_length[w_ll[i]])
+
+    return artist
+
+
+def plot_ndarray_cdf_lim_only(ax, ndarr, x_is_log=False, arrow_size=None, color='k', alpha=0.8, loc='bottom', **kwargs):
+
+    xmin = ndarr[0].min()
+    xmax = ndarr[0].max()
+    w_ul = np.where(ndarr[3] == 1)[0]
+    w_ll = np.where(ndarr[4] == 1)[0]
+    if x_is_log:
+        if arrow_size is None:
+            arrow_size = [0.3, 0.8]
+        arrow_length = np.ones(len(ndarr[0]))
+        arrow_length[w_ul] = ndarr[0, w_ul] * arrow_size[0]
+        arrow_length[w_ll] = ndarr[0, w_ll] * arrow_size[1]
+    else:
+        if arrow_size is None:
+            arrow_size = 0.1
+        arrow_length = np.ones(len(ndarr[0]))*(xmax-xmin) * arrow_size
+    if loc == 'bottom':
+        y_tail_start = 0.01
+        y_tail_stop = 0.03
+    elif loc == 'top':
+        y_tail_start = 0.97
+        y_tail_stop = 0.99
+
+    for i in range(len(w_ul)):
+        # upper limit
+        l2D = ax.axvline(ndarr[0,w_ul[i]], y_tail_start, y_tail_stop, color=color, linewidth=2)
+        ax.arrow(ndarr[0, w_ul[i]], np.average(l2D.get_ydata()), -arrow_length[w_ul[i]], 0,
+                 fc=color, ec=color, head_width=0.01, head_length=0.4*arrow_length[w_ul[i]], alpha=alpha, **kwargs)
+    for i in range(len(w_ll)):
+        l2D = ax.axvline(ndarr[0,w_ll[i]], y_tail_start, y_tail_stop, color=color, linewidth=2)
+        ax.arrow(ndarr[0, w_ll[i]], np.average(l2D.get_ydata()), arrow_length[w_ll[i]], 0,
+                 fc=color, ec=color, head_width=0.01, head_length=0.4*arrow_length[w_ll[i]], alpha=alpha, **kwargs)
+
+    return
+

@@ -133,6 +133,22 @@ def mask_ndarray(ndarray, mask):
     return masked_ndarray
 
 
+def sort_ndarray(ndarray, sorter=None):
+    """
+        Sorts a ndarray with finite values !! (will fail if there are NaNs)
+        If sorter is none, sorts the array with its values.
+        Otherwise, uses sorter as an argsort output.
+    """
+    if sorter is None:
+        arr_ind = ndarray[0].argsort()
+    else:
+        arr_ind = sorter
+    sorted_data = np.zeros(ndarray.shape)
+    sorted_data[:,:] = ndarray[:,arr_ind]
+
+    return sorted_data
+
+
 def chi2_func(mod, hist, err):
 
     return np.sum((np.abs(mod-hist)/err)**2)

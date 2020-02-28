@@ -54,15 +54,14 @@ def create_EpGBM_hist(fname=None, verbose=False, density=False, bins_log=True):
     bins.append(1e4)  # append right edge of last bin
     bins = np.array(bins)
 
-    if density:
-        N_EpGBM = hist.sum()
-        delta_bin = np.log10(bins[1:]/bins[:-1])
-        hist /= (N_EpGBM * delta_bin)
-        err /= (N_EpGBM * delta_bin)
-
     if bins_log:
         bins = np.log10(bins)
 
+    if density:
+        N_EpGBM = hist.sum()
+        delta_bin = bins[1:]-bins[:-1]
+        hist /= (N_EpGBM * delta_bin)
+        err /= (N_EpGBM * delta_bin)
     if verbose:
         ln_oi = 0.
         for i, val in enumerate(hist):
@@ -72,7 +71,7 @@ def create_EpGBM_hist(fname=None, verbose=False, density=False, bins_log=True):
     return bins, hist, err
 
 
-def create_eBAT6_hist(fname=None, verbose=False, eBAT6_weight=10):
+def create_eBAT6_hist(fname=None, density=False, verbose=False, eBAT6_weight=10):
     """
         Create the histogram for the eBAT6 redshift distribution
         Data was taken from Pescalli et al. 2016
@@ -85,6 +84,13 @@ def create_eBAT6_hist(fname=None, verbose=False, eBAT6_weight=10):
     err = read_column(fname, 2)
     bins.append(6)  # append right edge of last bin
     bins = np.array(bins)
+
+    if density:
+        N_eBAT6 = hist.sum()
+        delta_bin = bins[1:]-bins[:-1]
+        hist /= (N_eBAT6 * delta_bin)
+        err /= (N_eBAT6 * delta_bin)
+
     if verbose:
         ln_oi = 0.
         for i, val in enumerate(hist):
@@ -96,7 +102,7 @@ def create_eBAT6_hist(fname=None, verbose=False, eBAT6_weight=10):
     return bins, hist, err
 
 
-def global_GRB_rate_Stern(Stern_file):
+def global_GRB_rate_Stern(fname=None, new=False):
     """
         Calculate the global LGRB rate by correcting the Stern histogram
         with the efficiency correction [Stern et al. 2001]
@@ -104,13 +110,25 @@ def global_GRB_rate_Stern(Stern_file):
         Eq. 5. and summing over all the bins
     """
     global T_live_BATSE, Omega_BATSE
-    bins, hist_obs, err_obs = create_Stern_hist(Stern_file)
-    bin_midpoint = 0.5*(bins[:-1]+bins[1:])
-    hist_obs_corrected = hist_obs / efficiency_correction_Stern(bin_midpoint)
+    if fname is None:
+        if new:
+            fname = root_dir/'observational_constraints/Stern_lognlogp_rebinned_alternate.txt'
+        else:
+            fname = root_dir/'observational_constraints/Stern_lognlogp_rebinned.txt'
 
-    N_GRB_BATSE_tot = np.sum(hist_obs_corrected)
-    glob_rate = N_GRB_BATSE_tot / T_live_BATSE
-    all_sky_glob_rate = glob_rate * Omega_BATSE
+    bins, hist_obs, err_obs = create_Stern_hist(fname)
+    if new:
+        # New Stern hist is uncorrected for efficiency or live time of the search or solid angle
+        # Its not given as delta(N)/delta(logP) either, just as delta(N)
+        bin_midpoint = 0.5*(bins[:-1]+bins[1:])
+        hist_obs_corrected = hist_obs / efficiency_correction_Stern(bin_midpoint)
+
+        N_GRB_BATSE_tot = np.sum(hist_obs_corrected)
+        glob_rate = N_GRB_BATSE_tot / T_live_BATSE
+        all_sky_glob_rate = glob_rate * Omega_BATSE
+    else:
+        delta_bins = np.log10(bins[1:]/bins[:-1])
+        all_sky_glob_rate = np.sum(10**(hist_obs)*delta_bins)
 
     log.info(''.join([f"Global LGRB rate from Stern constraint: {all_sky_glob_rate:.2f} ",
              f"GRB/yr in 4 pi with peak flux in [50-300 keV] above {bins.min()} ph/s/cm2"]))

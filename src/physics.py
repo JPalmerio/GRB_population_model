@@ -190,7 +190,7 @@ def Erg_flux(L, z, Ep, D_L, alpha, beta, ktild, Emin, Emax,
 
 
 def Cts_flux_ECLAIRs(L, z, Ep, D_L, alpha, beta, ktild, Emin, Emax, eff_area_A_tot, eff_area_E_tot,
-                     precision=100, f90=True, **extra_args):
+    precision=100, f90=True, **extra_args):
     """
         Calculate the number of counts per second per square centimeter
         [cts/cm2/s] between Emin and Emax.
@@ -224,16 +224,18 @@ def Cts_flux_ECLAIRs(L, z, Ep, D_L, alpha, beta, ktild, Emin, Emax, eff_area_A_t
         else:
             B = np.zeros(Nb_GRBs)
             for i in range(Nb_GRBs):
-                B[i] = integrate.trapz(Btild(x[i], ktild[i], alpha[i], beta[i]), x[i], axis=0)
+                B[i] = integrate.trapz(eff_A[i]*Btild(x[i], ktild[i], alpha[i], beta[i]), x[i], axis=0)
         Cts_flux_ECLAIRs = B * (1.+z) * L/(4.*np.pi*Ep*cst.keV*(D_L*cst.Mpc)**2)  # in cgs (cts/cm2/s)
     else:
         xmin = (1.+z)*Emin/Ep
         xmax = (1.+z)*Emax/Ep
         x = np.logspace(np.log10(xmin), np.log10(xmax), precision)
+        E_grid = x * Ep / (1.+z)
+        eff_A = eff_area_A_tot[eff_area_E_tot.searchsorted(E_grid)]
         if f90:
-            B = f90f.f90f.integrate_1d(x=x, y=Btild(x, ktild, alpha, beta))
+            B = f90f.f90f.integrate_1d(x=x, y=eff_A*Btild(x, ktild, alpha, beta))
         else:
-            B = integrate.trapz(Btild(x, ktild, alpha, beta), x, axis=0)
+            B = integrate.trapz(eff_A*Btild(x, ktild, alpha, beta), x, axis=0)
         Cts_flux_ECLAIRs = B * (1.+z) * L/(4.*np.pi*Ep*cst.keV*(D_L*cst.Mpc)**2)  # in cgs (cts/cm2/s)
 
     return Cts_flux_ECLAIRs
@@ -389,7 +391,7 @@ def calc_energy_fluence(GRB_prop, incl_instruments):
 
 
 def calc_det_prob_SVOM(cts, offax_corr, omega_ECLAIRs, omega_ECLAIRs_tot, t90obs=1., Cvar=1.,
-                       n_sigma=6.5, bkg_total=3098.396271499998, f90=True, **extra_args):
+    n_sigma=6.5, bkg_total=3098.396271499998, f90=True, **extra_args):
 
     if isinstance(cts, np.ndarray):
         if f90:
