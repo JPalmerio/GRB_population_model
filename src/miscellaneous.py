@@ -1,8 +1,8 @@
 import logging
 import yaml
+import argparse
 import numpy as np
 import pandas as pd
-import argparse
 
 log = logging.getLogger(__name__)
 
@@ -119,6 +119,47 @@ def filter_df(df, filtering_key, lim_min=None, lim_max=None, equal=None, errors=
     return df_out
 
 
+def create_filtered_sample(fname, keys, func=None, func_args={}, ax=None, log=False, kde=True,
+    header=2, verbose=False, debug=False, errors='raise', **kwargs):
+    """
+        Convenience function to quickly plot an observed sample from a given file name.
+        A function to filter or cut the sample can be passed as func.
+    """
+    # Read the entire file
+    df_obs = pd.read_csv(fname, sep='|', header=header, low_memory=False)
+    # Strip the colum names to remove whitespaces
+    df_obs.rename(columns=lambda x:x.strip(), inplace=True)
+    # Activate debug to check the column names
+    if debug:
+        for i,col in enumerate(df_obs.columns):
+            print(i,col)
+
+    # Apply function to the data
+    if func is None:
+        for key in keys:
+            df_obs[key] = pd.to_numeric(df_obs[key], errors=errors)
+    # If func is a list, iterate through the list and apply each function
+    elif isinstance(func, list):
+        if not isinstance(func_args, list):
+            raise ValueError
+        for i, func_i in enumerate(func):
+            df_obs = func_i(df_obs, **func_args[i])
+        for key in keys:
+            df_obs[key] = pd.to_numeric(df_obs[key], errors=errors)
+    else:
+        df_obs = func(df_obs.copy(), **func_args)
+        df_obs[key] = pd.to_numeric(df_obs[key], errors=errors)
+
+    if log:
+        for key in keys:
+            df_obs[key] = pd.to_numeric(df_obs[key], errors=errors)
+            df_obs[key] = np.log10(df_obs[key])
+    if verbose:
+        print("Sample size :{}".format(len(df_obs.dropna())))
+
+    return df_obs
+
+
 def mask_ndarray(ndarray, mask):
     """
         Helper function to easily mask a ndarray output from read_data
@@ -149,9 +190,14 @@ def sort_ndarray(ndarray, sorter=None):
     return sorted_data
 
 
-def chi2_func(mod, hist, err):
-
-    return np.sum((np.abs(mod-hist)/err)**2)
+def calc_rel_errors_GBM_band(df_obs):
+    # Calculate relative errors on Band parameters for later filtering
+    keys = ['pflx_band_epeak_pos_err','pflx_band_epeak', 'pflx_band_ampl_pos_err', 'pflx_band_ampl']
+    for k in keys:
+        df_obs[k] = pd.to_numeric(df_obs[k], errors='coerce')
+    df_obs['pflx_band_epeak_rel_err'] = df_obs['pflx_band_epeak_pos_err']/df_obs['pflx_band_epeak']
+    df_obs['pflx_band_ampl_rel_err'] = df_obs['pflx_band_ampl_pos_err']/df_obs['pflx_band_ampl']
+    return df_obs
 
 
 def str2bool(s):

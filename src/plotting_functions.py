@@ -3,13 +3,14 @@ import numpy as np
 import seaborn as sns
 import pandas as pd
 import matplotlib.pyplot as plt
-import matplotlib
+from matplotlib import gridspec
+from matplotlib.colors import Normalize
+from matplotlib.lines import Line2D
 import observational_constraints as obs
 import miscellaneous as msc
 import stats as st
-from io_grb_pop import root_dir
 import io_grb_pop as io
-from matplotlib import gridspec
+from io_grb_pop import root_dir
 
 try:
     plt.style.use('presentation')
@@ -247,7 +248,7 @@ def scatter_incomplete_ndarray(ax, x, y, colormap=None, x_is_log=False, y_is_log
                 capsize=capsize, color=errorcolor, marker=None, linewidth=errlw, fmt='.',
                 alpha=alpha_errorbar, zorder=z_order)
     if colormap is not None:
-        norm = matplotlib.colors.Normalize(vmin=colormap[1], vmax=colormap[2])  # limits to the colorbar if colormap is used
+        norm = Normalize(vmin=colormap[1], vmax=colormap[2])  # limits to the colorbar if colormap is used
         scatterplot = ax.scatter(x_to_plot, y_to_plot, c=colormap[0][x_mask & y_mask],
                                  cmap=colormap[3], norm=norm, zorder=z_order+1,
                                  edgecolor=edgecolor, linewidth=linewidth, **kwargs)
@@ -483,11 +484,11 @@ def plot_CDF_with_bounds(bins_mid, median, lower, upper, ax, **kwargs):
     imax = np.where(median == 1)[0][0]
     xmin = bins_mid[imin]
     xmax = bins_mid[imax]
-    bottom_line = matplotlib.lines.Line2D([xmin,xmin], [0,median[imin]],
-                                          color=plot_color, linestyle=plot_ls, linewidth=plot_lw, zorder=plot_zorder)
+    bottom_line = Line2D([xmin,xmin], [0,median[imin]],
+                         color=plot_color, linestyle=plot_ls, linewidth=plot_lw, zorder=plot_zorder)
     ax.add_line(bottom_line)
-    top_line = matplotlib.lines.Line2D([xmax, xmax+(xmax-xmin)], [median[imax],median[imax]],
-                                       color=plot_color, linestyle=plot_ls, linewidth=plot_lw, zorder=plot_zorder)
+    top_line = Line2D([xmax, xmax+(xmax-xmin)], [median[imax],median[imax]],
+                      color=plot_color, linestyle=plot_ls, linewidth=plot_lw, zorder=plot_zorder)
     ax.add_line(top_line)
     ax.fill_between(bins_mid, lower, upper, step='mid', color=plot_color, alpha=0.3)
     ax.plot(bins_mid, lower, drawstyle='steps-mid',lw=0.7, c=plot_color)
@@ -550,9 +551,11 @@ def plot_ndarray_unbinned_cdf_with_limits(ax, data, x_is_log=False, arrow_size=N
     plot_lw = plt.getp(artist, 'linewidth')
     xmin = sorted_data[0,0]
     xmax = sorted_data[0,-1]
-    bottom_line = matplotlib.lines.Line2D([xmin,xmin], [0,ECDF[0]], color=plot_color, linestyle=plot_ls, linewidth=plot_lw)
+    bottom_line = Line2D([xmin,xmin], [0,ECDF[0]],
+                         color=plot_color, linestyle=plot_ls, linewidth=plot_lw)
     ax.add_line(bottom_line)
-    top_line = matplotlib.lines.Line2D([xmax, (2*xmax-sorted_data[0,-2])], [ECDF[-1],ECDF[-1]], color=plot_color, linestyle=plot_ls, linewidth=plot_lw)
+    top_line = Line2D([xmax, (2*xmax-sorted_data[0,-2])], [ECDF[-1],ECDF[-1]],
+                      color=plot_color, linestyle=plot_ls, linewidth=plot_lw)
     ax.add_line(top_line)
 
     if x_is_log:

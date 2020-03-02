@@ -1,0 +1,18 @@
+Stern:
+  instrument: 'BATSE'
+  val_min: 0.066825 # ph/s/cm2 in 50-300 keV
+  prop_min: 'pht_pflx_BATSE'
+  quantity: 'pht_pflx_BATSE'
+  sum_ln_oi_factorial: 36306.10949982049
+EpGBM:
+  instrument: 'BATSE'
+  val_min: 0.9 # ph/s/cm2 in 50-300 keV
+  prop_min: 'pht_pflx_BATSE'
+  quantity: 'Epobs'
+  sum_ln_oi_factorial: 4168.986506912058
+eBAT6:
+  instrument: 'BAT'
+  val_min: 2.6 # ph/s/cm2 in 15-150 keV
+  prop_min: 'pht_pflx_BAT'
+  quantity: 'z'
+  sum_ln_oi_factorial: 95.89913351276238

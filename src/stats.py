@@ -1,39 +1,43 @@
 import time
 import logging
 import numpy as np
-import pandas as pd
-import physics as ph
-import plotting_functions as pf
 from scipy.stats import mstats, ks_2samp
-from GRB_population import GRBPopulation
-# from observational_constraints import compare_to_Stern
+from astroML.utils import check_random_state
+import plotting_functions as pf
 
 log = logging.getLogger(__name__)
 
 
-def MonteCarlo_routine(Nb_GRBs, cosmo, params, incl_samples, incl_instruments, obs_dir,
-                       ECLAIRs_prop=None, output_dir=None, verbose=False, run_mode=None):
+def pBIL(mod, obs, epsilon=1e-3, sum_ln_oi_factorial=None, verbose=False):
+    """
+        The parametric Bayesian Indirect Likelihood (pBIL) is a goodness
+        of fit estimator based on a the idea that the number of objects
+        in each bin follows a Poissonian law. The likelihood is then:
+        likelihood = prod( exp(-s_i) * s_i**o_i / o_i! )
+        ln(likelihood) = sum( o_i * ln(s_i) - s_i - ln(o_i!) )
+        where s_i is the predicted number of objects in bin_i from the
+        model and o_i is the observed number of objects in bin_i
+        Epsilon is a user-defined constant added to empty bins to avoid
+        problems when computing the log. It should be small and does
+        not have an impact on the value of the likelihood as long as the
+        model fits the observations fairly well (i.e. no empty bins)
+    """
+    # Replace empty bins
+    mod_no_empty_bins = np.where(mod == 0, epsilon, mod)
+    if sum_ln_oi_factorial is None:
+        # Calculate sum( ln(o_i!) ) factor
+        sum_ln_oi_factorial = 0.
+        for i, val in enumerate(obs):
+            if val != 0:
+                sum_ln_oi_factorial += val*np.log(val) - val
+        if verbose:
+            log.info('In pBIL, sum_ln_oi_factorial = {}'.format(sum_ln_oi_factorial))
+    return np.sum(obs * np.log(mod_no_empty_bins) - mod_no_empty_bins) - sum_ln_oi_factorial
 
-    log.debug("Starting drawings of random samples...")
-    t1 = time.time()
-    GRB_population = GRBPopulation(Nb_GRBs, output_dir=output_dir)
-    GRB_prop = GRB_population.draw_GRB_properties(cosmo=cosmo, params=params, run_mode=run_mode)
-    t2 = time.time()
-    log.debug(f"Drawings done in {t2-t1:.3f} s")
 
-    ph.calc_peak_photon_flux(GRB_prop, incl_instruments, ECLAIRs_prop)
-    ph.calc_peak_energy_flux(GRB_prop, incl_instruments, ECLAIRs_prop)
-    ph.calc_photon_fluence(GRB_prop, incl_instruments)
-    ph.calc_energy_fluence(GRB_prop, incl_instruments)
-    ph.calc_det_prob(GRB_prop, incl_samples, **ECLAIRs_prop)
+def chi2(mod, obs, err):
 
-    df = pd.DataFrame(GRB_prop)
-
-    # if 'Stern' in incl_samples:
-    #     norm = compare_to_Stern(df[(df['pdet_Stern'] == 1)]['pht_pflx_BATSE'],
-    #                             Stern_file=obs_dir/'Stern_lognlogp_rebinned.txt',
-    #                             Nb_GRBs=Nb_GRBs, show_plot=verbose)
-    return
+    return np.sum((np.abs(mod-obs)/err)**2)
 
 
 def unbinned_empirical_cdf(data, weights=1):
@@ -302,7 +306,6 @@ def compute_CDF_bounds_by_MC(sample, sample_errp, sample_errm=None, sample_ll=No
             The figure on which is drawn the plot. Returns None if no show_plot is False.
 
     """
-    from astroML.utils import check_random_state
     if show_plot:
         import matplotlib.pyplot as plt
         from matplotlib.lines import Line2D

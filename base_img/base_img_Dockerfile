@@ -1,0 +1,22 @@
+FROM python:3.7-alpine3.9
+
+MAINTAINER "Jesse PALMERIO" jesse.palmerio@obspm.fr
+
+# This step is necessary to successfully install numpy
+RUN apk update \
+    && apk add g++ gfortran python3-dev
+
+RUN pip3 install --upgrade pip \
+    && pip3 install "setuptools>=40.1.0" \
+    && pip3 install "numpy==1.17.3" \
+    && pip3 install "matplotlib==3.1.1"\
+    && pip3 install "scipy==1.3.1"
+RUN pip3 install "pandas==0.25.2"\
+    && pip3 install "seaborn==0.9.0"\
+    && pip3 install "astroML==0.4.1"\
+    && pip3 install "yaml==5.1"
+
+
+
+# necessary steps for use of sh scripts
+RUN ln -sf ash /bin/sh

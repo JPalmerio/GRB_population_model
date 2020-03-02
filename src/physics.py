@@ -1,8 +1,8 @@
 import numpy as np
-import scipy.integrate as integrate
-import logging
-import constants as cst
 import time
+import logging
+import scipy.integrate as integrate
+import constants as cst
 
 log = logging.getLogger(__name__)
 
@@ -291,7 +291,7 @@ def Erg_flux_ECLAIRs(L, z, Ep, D_L, alpha, beta, ktild, Emin, Emax, eff_area_A_t
     return Erg_flux_ECLAIRs
 
 
-def calc_peak_photon_flux(GRB_prop, incl_instruments, ECLAIRs_prop, f90=True):
+def calc_peak_photon_flux(GRB_prop, incl_instruments, ECLAIRs_prop=None, f90=True):
     """
         Calculates peak photon flux in units of ph/cm2/s (assumed to be
         over a 1s time interval)
@@ -305,6 +305,9 @@ def calc_peak_photon_flux(GRB_prop, incl_instruments, ECLAIRs_prop, f90=True):
         log.debug(f"For {name} instrument [{Emin}, {Emax} keV]:")
         t1 = time.time()
         if name == 'ECLAIRs':
+            if ECLAIRs_prop is None:
+                raise ValueError('If you wish to calculate counts for ECLAIRs you must provide the'
+                                 ' ECLAIRs_prop dictionary with the relevent information')
             GRB_prop['_'.join(['pht_cts', name])] = Cts_flux_ECLAIRs(**GRB_prop,
                                                                      Emin=ECLAIRs_prop['Emin'],
                                                                      Emax=ECLAIRs_prop['Emax'],
@@ -319,7 +322,7 @@ def calc_peak_photon_flux(GRB_prop, incl_instruments, ECLAIRs_prop, f90=True):
     return
 
 
-def calc_peak_energy_flux(GRB_prop, incl_instruments, ECLAIRs_prop, f90=True):
+def calc_peak_energy_flux(GRB_prop, incl_instruments, ECLAIRs_prop=None, f90=True):
     """
         Calculates peak energy flux in units of erg/cm2/s (assumed to be
         over a 1s time interval)
@@ -333,6 +336,9 @@ def calc_peak_energy_flux(GRB_prop, incl_instruments, ECLAIRs_prop, f90=True):
         log.debug(f"For {name} instrument [{Emin}, {Emax} keV]:")
         t1 = time.time()
         if name == 'ECLAIRs':
+            if ECLAIRs_prop is None:
+                raise ValueError('If you wish to calculate counts for ECLAIRs you must provide the'
+                                 ' ECLAIRs_prop dictionary with the relevent information')
             GRB_prop['_'.join(['erg_cts', name])] = Erg_flux_ECLAIRs(**GRB_prop,
                                                                      Emin=ECLAIRs_prop['Emin'],
                                                                      Emax=ECLAIRs_prop['Emax'],

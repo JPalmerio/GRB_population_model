@@ -1,7 +1,7 @@
-from io_grb_pop import read_column
-import scipy.integrate as integrate
 import numpy as np
 import logging
+import scipy.integrate as integrate
+from io_grb_pop import read_column
 
 log = logging.getLogger(__name__)
 

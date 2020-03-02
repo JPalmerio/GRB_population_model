@@ -25,10 +25,11 @@ def generate_paths():
     ECLAIRs_dir = data_dir/'ECLAIRs'
 
     # Input files
-    configfile = init_dir/'config.yml'
-    paramfile = init_dir/'parameters.yml'
-    instrumfile = init_dir/'instruments.yml'
-    samplefile = init_dir/'samples.yml'
+    config_file = init_dir/'config.yml'
+    param_file = init_dir/'parameters.yml'
+    instrum_file = init_dir/'instruments.yml'
+    sample_file = init_dir/'samples.yml'
+    obs_constraints_file = init_dir/'obs_constraints.yml'
 
     paths_to_dir = {'root': root_dir,
                     'obs': obs_dir,
@@ -38,10 +39,11 @@ def generate_paths():
                     'cosmo': cosmo_dir,
                     'ECLAIRs': ECLAIRs_dir}
 
-    paths_to_files = {'config': configfile,
-                      'param': paramfile,
-                      'instrum': instrumfile,
-                      'sample': samplefile}
+    paths_to_files = {'config': config_file,
+                      'param': param_file,
+                      'instrum': instrum_file,
+                      'sample': sample_file,
+                      'obs_constraints': obs_constraints_file}
 
     paths_to_dir_str = f"""
     'root'    : {root_dir}
@@ -53,10 +55,11 @@ def generate_paths():
     'ECLAIRs' : {ECLAIRs_dir}"""
 
     paths_to_files_str = f"""
-    'config'  : {configfile}
-    'param'   : {paramfile}
-    'instrum' : {instrumfile}
-    'sample'  : {samplefile}"""
+    'config'          : {config_file}
+    'param'           : {param_file}
+    'instrum'         : {instrum_file}
+    'sample'          : {sample_file}
+    'obs_constraints' : {obs_constraints_file}"""
 
     log.debug("Directory paths :" + paths_to_dir_str)
     log.debug("File paths :" + paths_to_files_str)
@@ -78,11 +81,13 @@ def read_init_files(paths_to_files):
         instruments = yaml.safe_load(f)
     with open(paths_to_files['sample'], 'r') as f:
         samples = yaml.safe_load(f)
+    with open(paths_to_files['obs_constraints'], 'r') as f:
+        obs_constraints = yaml.safe_load(f)
 
     log.debug("Input configuration:\n" + str(yaml.dump(config, indent=4)))
     log.debug("Input parameters:\n" + str(yaml.dump(params, indent=4)))
 
-    return config, params, instruments, samples
+    return config, params, instruments, samples, obs_constraints
 
 
 def create_output_dir(paths_to_dir, dir_name, run_mode=None):

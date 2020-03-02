@@ -2,9 +2,14 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 import logging
-from io_grb_pop import read_column, root_dir
+import yaml
 from pathlib import Path
+from io_grb_pop import read_column, root_dir
 from cosmology import init_cosmology, Lum_dist
+from observational_constraints import load_observational_constraints
+import observational_constraints as obs
+import stats as st
+import physics as ph
 
 log = logging.getLogger(__name__)
 
@@ -20,6 +25,8 @@ class GRBPopulation:
     def __init__(self, Nb_GRBs, output_dir=None):
         self.Nb_GRBs = Nb_GRBs
         self.properties = pd.DataFrame({})
+        self.mock_constraints = {}
+        self.likelihood_params = {}
         if output_dir is None:
             self.output_dir = Path().cwd()
         else:
@@ -339,6 +346,26 @@ class GRBPopulation:
 
         return self.properties
 
+    def draw_GRB_properties_for_MCMC(self, cosmo, params, incl_instruments):
+        """
+            Draw only the core properties necessary to run the MCMC
+            exploration
+        """
+
+        self.draw_z(**params['redshift_distribution'], cosmo=cosmo)
+        self.draw_L(**params['luminosity_function'])
+        self.draw_Ep(**params['peak_energy_distribution'])
+        self.draw_spec(**params['spectral_shape'])
+
+        D_L = Lum_dist(self.properties['z'], cosmo)
+        Epobs = self.properties['Ep']/(1. + self.properties['z'])
+        self.properties['D_L'] = D_L
+        self.properties['Epobs'] = Epobs
+        ph.calc_peak_photon_flux(GRB_prop=self.properties,
+                                 incl_instruments=incl_instruments)
+
+        return self.properties
+
     def draw_from_cdf_file(self, filename, N_draws, **args):
         """
             Draw from an ascii file that contains two columns:
@@ -390,6 +417,74 @@ class GRBPopulation:
             else:
                 rate = np.exp(b*z) * np.exp((a-b)*zm)
         return norm*rate
+
+    def create_mock_constraint(self, obs_constraints=None):
+        """
+            Create the mock constraints from the current population.
+            obs_constraints is a dictionary with the necessary
+            information about each constraint.
+        """
+
+        if obs_constraints is None:
+            with open(root_dir/'init/obs_constraints.yml', 'r') as f:
+                obs_constraints = yaml.safe_load(f)
+            load_observational_constraints(obs_constraints)
+
+        for name, constraint in obs_constraints.items():
+            bins = constraint['bins']
+            val_min = constraint['val_min']
+            prop_min = constraint['prop_min']
+            quantity = constraint['quantity']
+            cond = self.properties[prop_min] >= val_min
+            mod, _u = np.histogram(self.properties[cond][quantity], bins=bins)
+            self.mock_constraints[name] = {'val_min':val_min,
+                                           'prop_min':prop_min,
+                                           'quantity':quantity,
+                                           'bins':bins,
+                                           'hist_unnormed':mod,
+                                           'err':np.sqrt(mod)}
+        return
+
+    def compare_to_observational_constraints(self, obs_constraints, method='chi2'):
+        """
+            First normalize the population to the observational
+            constraints then calculate the likelihood of the current
+            population.
+        """
+        lnL_tot = 0.0
+        chi2_tot = 0.0
+        for name, constraint in obs_constraints.items():
+            # Normalize to observations
+            model = self.mock_constraints[name]['hist_unnormed']
+            norm = obs.normalize_to_constraint(mod=model,
+                                               obs=constraint['hist'],
+                                               err=constraint['err'])
+            self.mock_constraints[name]['norm'] = norm
+            self.mock_constraints[name]['hist'] = norm * model
+            # Calculate likelihood
+            if method == 'chi2':
+                chi2 = st.chi2(mod=self.mock_constraints[name]['hist'],
+                               obs=constraint['hist'],
+                               err=constraint['err'])
+                self.likelihood_params['_'.join(['chi2',name])] = chi2
+                chi2_tot += chi2
+                lnL = -0.5 * chi2
+            elif method == 'pBIL':
+                lnL = st.pBIL(mod=self.mock_constraints[name]['hist'],
+                              obs=constraint['hist'],
+                              sum_ln_oi_factorial=constraint['sum_ln_oi_factorial'])
+                # If using pBIL, add a factor of 10 weight to the eBAT6
+                # constraint to make it more impactful
+                # if name == 'eBAT6':
+                #     lnL *= 10
+            self.likelihood_params['_'.join(['lnL',name])] = lnL
+            lnL_tot += lnL
+
+        self.likelihood_params['lnL_tot'] = lnL_tot
+        if method == 'chi2':
+            self.likelihood_params['chi2_tot'] = chi2_tot
+
+        return
 
     def save_all_GRBs(self, output_dir):
         """
