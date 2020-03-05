@@ -12,10 +12,11 @@ COPY ./data/ /home/data
 COPY ./init/ /home/init
 COPY ./observational_constraints/ /home/observational_constraints
 
-
 RUN mkdir /home/model_outputs
 VOLUME ./model_outputs /home/model_outputs
 
 WORKDIR /home/
+RUN cd src\
+    && make
 
-ENTRYPOINT ["python3","/src/test.py"]
+# ENTRYPOINT ["python3","/src/test.py"]

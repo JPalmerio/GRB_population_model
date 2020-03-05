@@ -13,4 +13,5 @@ RUN pip3 install --upgrade pip \
     && pip3 install "pandas==0.25.2" \
     && pip3 install "seaborn==0.9.0" \
     && pip3 install "astroML==0.4.1" \
-    && pip3 install "pyyaml==5.1"
+    && pip3 install "pyyaml==5.1"\
+    && pip3 install corner

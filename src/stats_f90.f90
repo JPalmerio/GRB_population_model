@@ -1,4 +1,4 @@
-Module stats_f90
+MODULE stats_f90
   IMPLICIT None
   PRIVATE
   PUBLIC :: ERF
@@ -171,4 +171,4 @@ CONTAINS
      GammaLn = tmp+LOG(stp*ser/x)
    END FUNCTION GammaLn
 
-END Module Stats
+END MODULE stats_f90

@@ -2,8 +2,9 @@
 catalogs/
 Input_para/
 ipynb_code/
-init/parameters_*
-Model_outputs/*
+init/parameters_k*
+model_outputs_non-dockerized/*
+model_outputs/*
 Src_para/
 verifications/
 src/__pycache__
