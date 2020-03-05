@@ -1,4 +1,4 @@
-Module Stats
+Module stats_f90
   IMPLICIT None
   PRIVATE
   PUBLIC :: ERF

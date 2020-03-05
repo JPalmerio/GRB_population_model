@@ -1,5 +1,5 @@
 MODULE f90f
-    USE Stats
+    USE stats_f90
     IMPLICIT None
 
 CONTAINS

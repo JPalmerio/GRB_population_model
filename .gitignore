@@ -1,4 +1,5 @@
-Model_outputs/*
+model_outputs_non-dockerized/
+model_outputs/*
 src/.ipynb_checkpoints
 src/__pycache__
 catalogs/.ipynb_checkpoints

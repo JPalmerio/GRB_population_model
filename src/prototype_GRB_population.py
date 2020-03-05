@@ -12,7 +12,6 @@ import miscellaneous as msc
 from GRB_population import GRBPopulation
 from cosmology import init_cosmology
 from ECLAIRs import init_ECLAIRs
-from stats import MonteCarlo_routine
 
 matplotlib.rc('text', usetex=False)
 
@@ -73,12 +72,6 @@ if __name__ == '__main__':
 
         df = pd.DataFrame(GRB_prop)
 
-        # if 'Stern' in incl_samples:
-        #     norm = obs.compare_to_Stern(df['pht_pflx_BATSE'],
-        #                                 Stern_det_prob=df['pdet_Stern'],
-        #                                 Stern_file=paths_to_dir['obs']/'Stern_lognlogp_rebinned_latest.txt',
-        #                                 Nb_GRBs=Nb_GRBs, show_plot=verbose)
-
         if config['save_all_GRBs']:
             GRB_population.save_all_GRBs(paths_to_dir['output'])
         tend = time.time()
@@ -89,13 +82,7 @@ if __name__ == '__main__':
                              run_mode=run_mode)
         np.random.seed(0)
         tstart = time.time()
-        MonteCarlo_routine(Nb_GRBs=Nb_GRBs, cosmo=cosmo, params=params,
-                           incl_samples=incl_samples,
-                           incl_instruments=incl_instruments,
-                           obs_dir=paths_to_dir['obs'],
-                           output_dir=paths_to_dir['output'],
-                           ECLAIRs_prop=ECLAIRs_prop,
-                           run_mode=run_mode)
+        raise NotImplementedError("Sorry I'm lazy")
         tend = time.time()
         log.info(f"MC routine execution time {tend-tstart:.3f}s")
         exit()

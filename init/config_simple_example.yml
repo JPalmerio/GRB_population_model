@@ -1,10 +1,10 @@
-# Results will be saved in root_dir/Model_outputs/output_dir/
-output_dir: 'debugger'
+# Results will be saved in root_dir/model_outputs/output_dir/
+output_dir: 'simple_example'
 
 Nb_GRBs: '1e5'
 
 # Samples can be anything you define in the samples.yml file
-samples: ['Stern', 'EpGBM', 'eBAT6', 'Swift', 'ECLAIRs', 'SHOALS', 'GBM_sample', 'BATSE_5B_sample']
+samples: ['Stern', 'EpGBM', 'eBAT6']
 
 # Saves all GRBs to a file, careful this file can be big
 save_all_GRBs: False

@@ -23,7 +23,7 @@ peak_energy_distribution:
     model: 'LN' # LN: LogNormal, A: Amati-like
     Ep0: 690 # keV
     sigmaEp: 0.45
-    alpha_amati: 0.3 # this parameter is ignored in the A case
+    alpha_amati: 0.3
 
 t90obs_distribution:
     mu: 1.45

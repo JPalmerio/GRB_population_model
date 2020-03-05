@@ -77,8 +77,8 @@ def unbinned_empirical_cdf(data, weights=1):
     return sorted_data, CDF
 
 
-def subsample_and_KS(df1, df2, N_sub, key, confidence=95.0, N_bs=100, precision=500, bins=None, show_plot=False,
-                     label1=None, label2=None, subsample1=True, subsample2=True):
+def subsample_and_KS(df1, df2, N_sub, key, confidence=95.0, N_bs=100, precision=500, bins=None,
+    show_plot=False, label1=None, label2=None, subsample1=True, subsample2=True):
     """
         Compute the K-S test between a subsample of size N_sub.
         Repeat the K-S test for N_bs bootstraps and create a distribution of p-values.
@@ -188,7 +188,11 @@ def compute_KS_with_bootstrap(samples1, samples2, N_bs):
     return D_stat, p_value
 
 
-def compute_CDF_bounds_by_MC(sample, sample_errp, sample_errm=None, sample_ll=None, sample_ul=None, ll_max_val=None, ul_min_val=None, weights=None, weights_err=None, weqs=False, confidence=95.0, bins=None, positive=False, precision=1000, precision_pdf=1000, N_MC=1000, bootstrap=False, verbose=False, random_state=None,show_plot=False, ax=None, color='k', show_median=True, **kwargs):
+def compute_CDF_bounds_by_MC(sample, sample_errp, sample_errm=None, sample_ll=None, sample_ul=None,
+    ll_max_val=None, ul_min_val=None, weights=None, weights_err=None, weqs=False, confidence=95.0,
+    bins=None, positive=False, precision=1000, precision_pdf=1000, N_MC=1000, bootstrap=False,
+    verbose=False, random_state=None, show_plot=False, ax=None, color='k', show_median=True,
+    **kwargs):
     """
         Function to compute the lower and upper bounds of a cumulative distribution function for quantities with errors.
         Note if this function takes too long, try reducing N_MC or precision.

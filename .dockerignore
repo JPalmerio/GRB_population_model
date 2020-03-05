@@ -1,0 +1,11 @@
+.git/
+catalogs/
+Input_para/
+ipynb_code/
+init/parameters_*
+Model_outputs/*
+Src_para/
+verifications/
+src/__pycache__
+src/.ipynb_checkpoints
+src/f90_functions.cpython*

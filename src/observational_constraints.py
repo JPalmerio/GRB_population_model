@@ -17,8 +17,7 @@ def load_observational_constraints(obs_constraints):
         a dictionary to be used by the fitting procedure.
     """
 
-    constraint_name = ['Stern', 'EpGBM', 'eBAT6']
-    for name in constraint_name:
+    for name in obs_constraints.keys():
         bins, hist, err = read_constraint(name)
         obs_constraints[name]['bins'] = bins
         obs_constraints[name]['hist'] = hist
@@ -52,7 +51,7 @@ def create_Stern_hist_for_lnL(fname=None, verbose=False):
     """
     global T_live_BATSE, T_BATSE_mission
     if fname is None:
-        fname = root_dir/'observational_constraints/Stern_lognlogp_rebinned.txt'
+        fname = root_dir/'observational_constraints/Stern.txt'
 
     bins = read_column(fname, 0, array=False)
     hist = read_column(fname, 1)
@@ -86,7 +85,7 @@ def create_Stern_hist(fname=None, verbose=False):
     """
     global T_live_BATSE
     if fname is None:
-        fname = root_dir/'observational_constraints/Stern_lognlogp_rebinned.txt'
+        fname = root_dir/'observational_constraints/Stern.txt'
 
     bins = read_column(fname, 0, array=False)
     hist = read_column(fname, 1)
@@ -114,7 +113,7 @@ def create_EpGBM_hist(fname=None, verbose=False, density=False, bins_log=False):
         delta_N / (N_EpGBM * delta_log_bin)
     """
     if fname is None:
-        fname = root_dir/'observational_constraints/EpGBM_for_plotting.txt'
+        fname = root_dir/'observational_constraints/EpGBM.txt'
 
     bins = read_column(fname, 0, array=False)
     hist = read_column(fname, 1)
@@ -145,7 +144,7 @@ def create_eBAT6_hist(fname=None, density=False, verbose=False, eBAT6_weight=10)
         Data was taken from Pescalli et al. 2016
     """
     if fname is None:
-        fname = root_dir/'observational_constraints/eBAT6_constraint_for_plotting.txt'
+        fname = root_dir/'observational_constraints/eBAT6.txt'
 
     bins = read_column(fname, 0, array=False)
     hist = read_column(fname, 1)

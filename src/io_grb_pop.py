@@ -10,7 +10,7 @@ log = logging.getLogger(__name__)
 root_dir = Path(__file__).resolve().parents[1]
 
 
-def generate_paths():
+def generate_paths(init_dir=None):
     """
         Generate the various paths for the necessary input and output
         files.
@@ -18,11 +18,12 @@ def generate_paths():
     log.debug(f"Root directory is {root_dir}")
 
     obs_dir = root_dir/'observational_constraints'
-    init_dir = root_dir/'init'
     output_dir = root_dir/'model_outputs'
     data_dir = root_dir/'data'
     cosmo_dir = data_dir/'cosmology'
     ECLAIRs_dir = data_dir/'ECLAIRs'
+    if init_dir is None:
+        init_dir = root_dir/'init'
 
     # Input files
     config_file = init_dir/'config.yml'
@@ -90,7 +91,7 @@ def read_init_files(paths_to_files):
     return config, params, instruments, samples, obs_constraints
 
 
-def create_output_dir(paths_to_dir, dir_name, run_mode=None):
+def create_output_dir(paths_to_dir, dir_name, overwrite=False):
     """
         Create the output directory where the results from the code will
         be saved. This directory is named as YYMMDD_{output_dir}
@@ -100,18 +101,21 @@ def create_output_dir(paths_to_dir, dir_name, run_mode=None):
 
     today = datetime.datetime.now().strftime('%y%m%d')
     _output_dir = paths_to_dir['output'] / '_'.join([today, dir_name])
-    if run_mode == 'debug':
+    if overwrite:
+        # if in overwrite mode, write over any old outputs
         if not _output_dir.is_dir():
             _output_dir.mkdir()
     else:
+        # otherwise, make sure directory doesn't exist, if it does
+        # append _n at the end and create a new one to avoid overwriting
         n = 2
         while _output_dir.is_dir():
             log.warning(f"{_output_dir} already exists...")
             _output_dir = paths_to_dir['output'] / '_'.join([today, dir_name, f'{n}'])
             log.info(f"Trying {_output_dir}")
             n += 1
-            if n > 100:
-                raise ValueError('Over 100 directories already exist. Something probably went wrong')
+            if n > 10:
+                raise ValueError('Over 10 directories already exist. Something probably went wrong')
         _output_dir.mkdir()
     paths_to_dir['output'] = _output_dir
 
