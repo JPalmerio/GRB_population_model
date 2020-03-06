@@ -1,6 +1,7 @@
 from ECLAIRs import init_ECLAIRs
 from cosmology import init_cosmology
 from GRB_population import GRBPopulation
+import physics as ph
 import io_grb_pop as io
 import miscellaneous as msc
 import observational_constraints as obs
@@ -41,9 +42,10 @@ incl_instruments = msc.included_instruments(incl_samples, instruments)
 np.random.seed(0)
 GRB_population = GRBPopulation(Nb_GRBs=int(float(config['Nb_GRBs'])),
                                output_dir=paths_to_dir['output'])
-GRB_population.draw_GRB_properties_for_MCMC(cosmo=cosmo,
-                                            params=params,
-                                            incl_instruments=incl_instruments)
+GRB_population.draw_GRB_properties(cosmo=cosmo, params=params, run_mode='debug', savefig=True)
+ph.calc_peak_photon_flux(GRB_prop=GRB_population.properties,
+                         incl_instruments=incl_instruments)
 GRB_population.create_mock_constraint(obs_constraints=obs_constraints)
 GRB_population.compare_to_observational_constraints(obs_constraints=obs_constraints, method='chi2')
 
+log.info(GRB_population.summary())

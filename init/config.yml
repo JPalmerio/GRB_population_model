@@ -6,6 +6,9 @@ Nb_GRBs: '1e5'
 # Samples can be anything you define in the samples.yml file
 samples: ['Stern', 'EpGBM', 'eBAT6', 'Swift', 'ECLAIRs', 'SHOALS', 'GBM_sample', 'BATSE_5B_sample']
 
+# Constraints can by anything you define in the obs_constraints.yml file
+constraints: ['Stern', 'EpGBM', 'eBAT6']
+
 # Saves all GRBs to a file, careful this file can be big
 save_all_GRBs: False
 

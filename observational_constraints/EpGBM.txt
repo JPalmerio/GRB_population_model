@@ -1,5 +1,5 @@
 # Epeak histogram from GBM catalog extracted on 27/10/16, with a cut on time ( >= 2s) and on BATSE peak flux ( >= 0.9 ph/cm2/s) 
-# bins | counts 
+# Epeak left bin edge | counts | sqrt(N) 
 # Total number of GRB : 1022 
 1.000000e+01 	 1.800000e+01 	 4.242641e+00 
 3.000000e+01 	 7.200000e+01 	 8.485281e+00 

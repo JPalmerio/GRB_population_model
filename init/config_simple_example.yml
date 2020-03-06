@@ -6,6 +6,8 @@ Nb_GRBs: '1e5'
 # Samples can be anything you define in the samples.yml file
 samples: ['Stern', 'EpGBM', 'eBAT6']
 
+constraints: ['Stern', 'EpGBM', 'eBAT6']
+
 # Saves all GRBs to a file, careful this file can be big
 save_all_GRBs: False
 

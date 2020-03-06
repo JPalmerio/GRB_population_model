@@ -16,7 +16,6 @@ RUN mkdir /home/model_outputs
 VOLUME ./model_outputs /home/model_outputs
 
 WORKDIR /home/
-RUN cd src\
-    && make
+RUN cd src; make; cd ..
 
-# ENTRYPOINT ["python3","/src/test.py"]
+ENTRYPOINT ["python3","src/simple_example.py"]

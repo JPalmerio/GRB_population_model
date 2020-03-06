@@ -1,6 +1,6 @@
 # Histogram of peak fluxes from Stern+01 catalog, rebinned to avoid low number (<10) bins.
 # We removed the smallest bin as it was plagued with significant uncertainties.
-# Peak count rate was NOT converted to peak flux since we used the raw data from Stern+01.
+# Peak count rate was NOT converted to peak flux since we used the raw data from Stern+01 which is already in units of peak flux.
 # The last bin ends at 50.0, and there are 26 bins.
 # Nb_GRBs/year/log10(pflx) is NOT corrected for efficiency.
 # 1. Peak flux (left bin edge) [ph/cm2/s]  2. Nb_GRBs  3. Error = sqrt(N) 

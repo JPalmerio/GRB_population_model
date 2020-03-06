@@ -6,7 +6,7 @@
 # Nb_GRBs/year/log10(pflx) is corrected for efficiency as described in Stern+01 (Fig.22).
 # Total number of GRBs (after efficiency correction ) : 6938
 #
-# 1. Peak flux (left bin edge) [ph/cm2/s]  2. log10(Nb_GRBs/year/log10(pflx))  3. 1 sigma error in log10 scale
+# 1. Peak flux (left bin edge) [ph/cm2/s]  2. log10(Nb_GRBs/year/delta(log10(pflx)))  3. 1 sigma error in log10 scale
 #
 6.682496e-02 3.069180e+00 9.691000e-02
 8.412765e-02 3.046704e+00 5.273219e-02

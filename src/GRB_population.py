@@ -508,21 +508,62 @@ class GRBPopulation:
             fig.savefig(self.output_dir/filename)
         return
 
-    def summary(self):
-        summary = "======================================================================\n"
-        summary += "===                         SUMMARY                                ===\n"
-        summary += "======================================================================\n"
-        summary += " prop \t| median \t| stdev \t| min    \t| max\n"
-        summary += "---------------------------------------------------------------------- "
+    def summary(self, full_width=80, cell_width=None, sides='|', thick_line="=", thin_line='-'):
+        """
+            A short summary of the current LGRB population returned as
+            a string.
+        """
+        if full_width % 2 != 0:
+            full_width += 1
+            log.warning("In GRBPopulation.summary(): the width you are asking for is odd."
+                        " It was increased by 1 for esthetic purposes.")
+        max_len = max(map(len, self.properties)) + 1
+        if cell_width is None:
+            cell_width = np.max([max_len, 14])
+        center_width = full_width - 2*len(sides)
+        half_width = int(center_width / 2)
+        summary = "\n" + full_width * thick_line + "\n"
+        summary += sides + "SUMMARY".center(center_width) + sides + "\n"
+        summary += full_width * thick_line + "\n"
+        # General configuration
+        _Nb_GRBs_string = f"Nb_GRBs =".rjust(half_width)
+        _Nb_GRBs = f" {self.Nb_GRBs:.2e}".ljust(half_width+1)
+        _output_dir_string = f"Output directory =".rjust(half_width)
+        _output_dir = f" {self.output_dir.stem}".ljust(half_width+1)
+        summary += sides + _Nb_GRBs_string + _Nb_GRBs + sides + "\n"
+        summary += sides + _output_dir_string + _output_dir + sides + "\n"
+        summary += full_width * thick_line + "\n"
+        # Properties
+        summary += sides + "Properties".center(center_width) + sides + "\n"
+        summary += full_width * thick_line + "\n"
+        summary += '|'.join([' prop'.ljust(cell_width),
+                             'median'.center(cell_width),
+                             'stdev'.center(cell_width),
+                             'min'.center(cell_width),
+                             'max'.center(cell_width)]) + "\n"
+        summary += full_width * thin_line + "\n"
         for key, prop in self.properties.items():
-            if key == 'Nb_GRBs':
-                pass
-            else:
-                med = np.median(prop)
-                std = np.std(prop)
-                _min = prop.min()
-                _max = prop.max()
-                _summary = '\t|'.join([f" {key}", f" {med:.5e} ", f" {std:.5e} ", f" {_min:.5e} ", f" {_max:.5e} "])
-                summary = '\n'.join([summary, _summary])
-        summary += "\n======================================================================\n"
+            med = np.median(prop)
+            std = np.std(prop)
+            _min = prop.min()
+            _max = prop.max()
+            _summary = '|'.join([f" {key}".ljust(cell_width),
+                                 f"{med:< .4e}".center(cell_width),
+                                 f"{std:< .4e}".center(cell_width),
+                                 f"{_min:< .4e}".center(cell_width),
+                                 f"{_max:< .4e}".center(cell_width)])
+            summary += _summary.ljust(full_width) + "\n"
+
+        summary += full_width * thick_line + "\n"
+        summary += sides + "Likelihood".center(center_width) + sides + "\n"
+        summary += full_width * thick_line + "\n"
+        # Likelihood
+        for key, val in sorted(self.likelihood_params.items()):
+            _key = f"{key} =".rjust(half_width)
+            _val = f" {val:.5f}".ljust(half_width+1)
+            _summary = sides + _key + _val + sides + "\n"
+            summary += _summary
+
+        summary += full_width * thick_line + "\n"
+
         return summary

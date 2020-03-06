@@ -3,6 +3,7 @@ output_dir: 'emcee_test'
 Nb_GRBs: '1e5'
 
 samples: ['Stern', 'EpGBM', 'eBAT6']
+constraints: ['Stern', 'EpGBM', 'eBAT6']
 
 save_all_GRBs: False
 

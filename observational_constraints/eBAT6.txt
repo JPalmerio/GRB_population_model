@@ -1,5 +1,5 @@
 # eBAT6 redshift distribution constraint from Pescalli et al. 2016
-# redshift bin | counts | poisson error
+# redshift left bin edge | counts | poisson error
 # Number of GRBs in sample : 82
 0.000000e+00 	 3 	 2
 4.000000e-01 	 11 	 3
