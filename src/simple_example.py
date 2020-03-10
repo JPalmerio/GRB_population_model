@@ -1,10 +1,9 @@
 from ECLAIRs import init_ECLAIRs
 from cosmology import init_cosmology
-from GRB_population import GRBPopulation
+from GRB_pop import GRBPopulation
 import physics as ph
 import io_grb_pop as io
 import miscellaneous as msc
-import observational_constraints as obs
 import numpy as np
 import logging
 import sys
@@ -34,18 +33,18 @@ ECLAIRs_prop = init_ECLAIRs(ECLAIRs_dir=paths_to_dir['ECLAIRs'],
 samples['ECLAIRs']['pflx_min'] = ECLAIRs_prop['bkg_total']
 
 # Some final initializations
-obs_constraints = obs.load_observational_constraints(obs_constraints)
-incl_samples = msc.included_samples(config['samples'], samples)
-incl_instruments = msc.included_instruments(incl_samples, instruments)
-
+incl_samples, incl_instruments, incl_constraints = msc.create_config(config,
+                                                                     samples,
+                                                                     instruments,
+                                                                     obs_constraints)
 # Generate the GRB population
 np.random.seed(0)
-GRB_population = GRBPopulation(Nb_GRBs=int(float(config['Nb_GRBs'])),
-                               output_dir=paths_to_dir['output'])
-GRB_population.draw_GRB_properties(cosmo=cosmo, params=params, run_mode='debug', savefig=True)
-ph.calc_peak_photon_flux(GRB_prop=GRB_population.properties,
-                         incl_instruments=incl_instruments)
-GRB_population.create_mock_constraint(obs_constraints=obs_constraints)
-GRB_population.compare_to_observational_constraints(obs_constraints=obs_constraints, method='chi2')
+GRB_pop = GRBPopulation(Nb_GRBs=int(float(config['Nb_GRBs'])),
+                        output_dir=paths_to_dir['output'])
+GRB_pop.draw_GRB_properties(cosmo=cosmo, params=params, run_mode='debug', savefig=True)
+ph.calc_peak_photon_flux(GRB_prop=GRB_pop.properties, incl_instruments=incl_instruments)
+ph.calc_det_prob(GRB_prop=GRB_pop.properties, incl_samples=incl_samples)
+GRB_pop.create_mock_constraint(obs_constraints=incl_constraints)
+GRB_pop.compare_to_observational_constraints(obs_constraints=incl_constraints, method='chi2')
 
-log.info(GRB_population.summary())
+log.info(GRB_pop.summary())

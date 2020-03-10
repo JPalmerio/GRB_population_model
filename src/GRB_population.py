@@ -70,11 +70,10 @@ class GRBPopulation:
 
             if k_evol != 0.0:
                 if z is None:
-                    try:
-                        z = self.properties['z']
-                        L *= (1 + z)**k_evol
-                    except KeyError:
-                        raise ValueError('Could not find z to use in L_draw')
+                    if 'z' not in self.properties.keys():
+                        raise KeyError('Could not find z to use in draw_L')
+                    z = self.properties['z']
+                    L *= (1 + z)**k_evol
                 else:
                     L *= (1 + z)**k_evol
         elif model == 'EBPL':
@@ -89,7 +88,7 @@ class GRBPopulation:
             fig, ax = plt.subplots(figsize=(6, 5), tight_layout=True)
             ax.hist(np.log10(L),
                     bins=np.arange(logLmin, logLmax, 0.1),
-                    density=True,
+                    density=True, color='lightgray',
                     label='Drawings', edgecolor='k', linewidth=0.5)
             ax.set_xlabel('log(L [erg/s])')
             ax.set_ylabel('L PDF')
@@ -148,7 +147,8 @@ class GRBPopulation:
             log.info("Debug mode activated; plotting z pdf")
             fig, axes = plt.subplots(2, figsize=(6, 7), tight_layout=True)
             delta_z = z_range[1]-z_range[0]
-            axes[0].hist(z, bins=50, density=True, label='Drawings', edgecolor='k', linewidth=0.5)
+            axes[0].hist(z, bins=50, density=True, color='lightgray', label='Drawings',
+                         edgecolor='k', linewidth=0.5)
             axes[0].plot(z_range, z_pdf/delta_z, label='PDF')
             axes[0].set_ylabel('z PDF')
             axes[0].set_yscale('log')
@@ -194,7 +194,7 @@ class GRBPopulation:
             logEpmax = np.log10(Ep0) + 5*sigmaEp
             ax.hist(np.log10(Ep),
                     bins=np.arange(logEpmin, logEpmax, 0.1),
-                    density=True,
+                    density=True, color='lightgray',
                     label='Drawings', edgecolor='k', linewidth=0.5)
             ax.set_xlabel('log(Ep [keV])')
             ax.set_ylabel('Ep PDF')
@@ -249,7 +249,7 @@ class GRBPopulation:
             for i, item, name in zip([0, 1], [alpha, beta], ['alpha', 'beta']):
                 axar[i].hist(item,
                              bins=30,
-                             density=True,
+                             density=True, color='lightgray',
                              label='Drawings', edgecolor='k', linewidth=0.5)
                 axar[i].set_xlabel(name)
                 axar[i].set_ylabel(name+' PDF')
@@ -260,6 +260,8 @@ class GRBPopulation:
 
     def draw_t90obs(self, Nb_GRBs=None, run_mode=None, savefig=False, **params):
         """ Draw t90obs from LogNormal distribution """
+        log.warning("Jesse, you are drawing from T90obs instead of T90intr."
+                    " Make sure you know what you're doing.")
         if Nb_GRBs is None:
             Nb_GRBs = self.Nb_GRBs
         mu_t90obs = params['mu']
@@ -275,7 +277,7 @@ class GRBPopulation:
             logt90obsmax = mu_t90obs + 5*sigma_t90obs
             ax.hist(np.log10(t90obs),
                     bins=np.arange(logt90obsmin, logt90obsmax, 0.1),
-                    density=True,
+                    density=True, color='lightgray',
                     label='Drawings', edgecolor='k', linewidth=0.5)
             ax.set_xlabel('log(t90obs [s])')
             ax.set_ylabel('t90obs PDF')
@@ -284,16 +286,53 @@ class GRBPopulation:
                 self.save_fig(fig, 't90obs_draw.pdf')
         return t90obs.copy()
 
+    def draw_t90(self, z_med=None, Nb_GRBs=None, run_mode=None, savefig=False, **params):
+        """
+            Draw t90 from LogNormal distribution corrected by a median
+            redshift
+        """
+        if Nb_GRBs is None:
+            Nb_GRBs = self.Nb_GRBs
+        if z_med is None:
+            try:
+                z_med = params['z_med']
+            except KeyError:
+                z_med = 1.7
+                log.warning("In draw_t90, no z_med was found to correct the t90 distribution."
+                            " A default value of z_med = 1.7 was used but you should check this.")
+        # Correct the observed mu with the median redshift of the
+        # sample on which it was derived
+        mu_t90 = params['mu']-np.log10(1.+z_med)
+        sigma_t90obs = params['sigma']
+        t90 = 10.**(np.random.normal(mu_t90, sigma_t90obs, Nb_GRBs))
+
+        self.properties['t90'] = t90
+
+        if run_mode == 'debug':
+            log.info("Debug mode activated; plotting t90 pdf")
+            fig, ax = plt.subplots(figsize=(6, 5), tight_layout=True)
+            logt90min = mu_t90 - 5*sigma_t90obs
+            logt90max = mu_t90 + 5*sigma_t90obs
+            ax.hist(np.log10(t90),
+                    bins=np.arange(logt90min, logt90max, 0.1),
+                    density=True, color='lightgray',
+                    label='Drawings', edgecolor='k', linewidth=0.5)
+            ax.set_xlabel('log(t90 [s])')
+            ax.set_ylabel('t90 PDF')
+            ax.legend()
+            if savefig:
+                self.save_fig(fig, 't90_draw.pdf')
+        return t90.copy()
+
     def draw_Cvar(self, Nb_GRBs=None, t90obs=None, run_mode=None, savefig=False, **params):
         """ Draw Cvar from t90obs correlated distribution """
         if Nb_GRBs is None:
             Nb_GRBs = self.Nb_GRBs
 
         if t90obs is None:
-            try:
-                t90obs = self.properties['t90obs']
-            except KeyError:
-                raise ValueError('Could not find t90obs for drawing in Cvar')
+            self._check_properties(necessary_prop=['t90obs'],
+                                   func_name='Cvar')
+            t90obs = self.properties['t90obs']
 
         mu_Cvar = params['mu']
         sigma_Cvar = params['sigma']
@@ -309,7 +348,7 @@ class GRBPopulation:
             fig, ax = plt.subplots(figsize=(6, 5), tight_layout=True)
             ax.hist(np.log10(Cvar),
                     bins=np.arange(-2, 0.1, 0.05),
-                    density=True,
+                    density=True, color='lightgray',
                     label='Drawings', edgecolor='k', linewidth=0.5)
             ax.set_xlabel('log(Cvar)')
             ax.set_ylabel('Cvar PDF')
@@ -327,18 +366,26 @@ class GRBPopulation:
         self.draw_z(**params['redshift_distribution'], cosmo=cosmo, run_mode=run_mode, savefig=savefig)
         self.draw_L(**params['luminosity_function'], run_mode=run_mode, savefig=savefig)
         self.draw_Ep(**params['peak_energy_distribution'], run_mode=run_mode, savefig=savefig)
-        self.draw_t90obs(**params['t90obs_distribution'], run_mode=run_mode, savefig=savefig)
-        self.draw_Cvar(**params['Cvar_distribution'], run_mode=run_mode, savefig=savefig)
         self.draw_spec(**params['spectral_shape'], run_mode=run_mode, savefig=savefig)
-
         D_L = Lum_dist(self.properties['z'], cosmo)
         Epobs = self.properties['Ep']/(1. + self.properties['z'])
-        t90 = self.properties['t90obs'] / (1. + self.properties['z'])
-        Eiso = self.properties['L'] * self.properties['Cvar'] * t90
+
+        # The median redshift of the population of GBM_bright is needed
+        # to calculate t90 (which is defined as pht_pflx in BATSE band
+        # above 0.9 ph/s/cm2)
+        self.calc_peak_photon_flux(incl_instruments=['BATSE'])
+        GBM_bright_selection = self.properties['pht_pflx_BATSE'] >= 0.9
+        z_med = np.median(self.properties[GBM_bright_selection]['z'])
+        self.draw_t90(**params['t90obs_distribution'], z_med=z_med, run_mode=run_mode, savefig=savefig)
+        t90obs = self.properties['t90'] * (1. + self.properties['z'])
+        self.draw_Cvar(**params['Cvar_distribution'], run_mode=run_mode, savefig=savefig)
+
+        Eiso = self.properties['L'] * self.properties['Cvar'] * self.properties['t90']
+
         self.properties['D_L'] = D_L
         self.properties['Epobs'] = Epobs
         self.properties['Eiso'] = Eiso
-        self.properties['t90'] = t90
+        self.properties['t90obs'] = t90obs
 
         if run_mode == 'debug':
             summary = self.summary()
@@ -361,6 +408,8 @@ class GRBPopulation:
         Epobs = self.properties['Ep']/(1. + self.properties['z'])
         self.properties['D_L'] = D_L
         self.properties['Epobs'] = Epobs
+        # Use the function from physics module to avoid unecessary
+        # checks present in the class method
         ph.calc_peak_photon_flux(GRB_prop=self.properties,
                                  incl_instruments=incl_instruments)
 
@@ -376,6 +425,70 @@ class GRBPopulation:
         draws = np.random.rand(N_draws)
         values = value_range[cdf.searchsorted(draws)]
         return values
+
+    def calc_peak_photon_flux(self, incl_instruments):
+        """
+            Calculate the peak photon flux for every GRB in the
+            population.
+        """
+        necessary_prop = ['L', 'z', 'Ep', 'alpha', 'beta', 'D_L']
+        self._check_properties(necessary_prop, func_name='peak photon flux')
+        ph.calc_peak_photon_flux(GRB_prop=self.properties,
+                                 incl_instruments=incl_instruments)
+        return
+
+    def calc_peak_energy_flux(self, incl_instruments):
+        """
+            Calculate the peak energy flux for every GRB in the
+            population.
+        """
+        necessary_prop = ['L', 'z', 'Ep', 'alpha', 'beta', 'D_L']
+        self._check_properties(necessary_prop, func_name='peak energy flux')
+        ph.calc_peak_energy_flux(GRB_prop=self.properties,
+                                 incl_instruments=incl_instruments)
+        return
+
+    def calc_photon_fluence(self, incl_instruments):
+        """
+            Calculate the photon fluence in units of ph/cm2 over the T90
+            of the burst.
+        """
+        necessary_prop = ['t90obs', 'Cvar']
+        self._check_properties(necessary_prop, func_name='photon fluence')
+        ph.calc_photon_fluence(GRB_prop=self.properties,
+                               incl_instruments=incl_instruments)
+        return
+
+    def calc_energy_fluence(self, incl_instruments):
+        """
+            Calculate the photon fluence in units of ph/cm2 over the T90
+            of the burst.
+        """
+        necessary_prop = ['t90obs', 'Cvar']
+        self._check_properties(necessary_prop, func_name='energy fluence')
+        ph.calc_energy_fluence(GRB_prop=self.properties,
+                               incl_instruments=incl_instruments)
+        return
+
+    def calc_det_prob(self, incl_samples, **ECLAIRs_args):
+        """
+            Calculates the detection probability for the included
+            samples
+        """
+        ph.calc_det_prob(GRB_prop=self.properties,
+                         incl_samples=incl_samples, **ECLAIRs_args)
+        return
+
+    def _check_properties(self, necessary_prop, func_name):
+        """
+            Convenience, private function to check if the inputs
+            required for a given calculation are present in the
+            population properties
+        """
+        for prop in necessary_prop:
+            if prop not in self.properties.keys():
+                raise KeyError(f"Property {prop} must exist before you attempt to calculate the"
+                               f" {func_name}.")
 
     def create_pdf_from_cdf(self, filename, **args):
         x = read_column(filename, 0, **args)
@@ -404,13 +517,14 @@ class GRBPopulation:
 
     def GRBrate_exp(self, z, a=1.1, b=-0.57, zm=1.9, norm=0.00033313):
         """
-            GRB rate as parametrized by a broken exponential function. Default values are chosen as best fit from SFR of Vangioni+15
+            GRB rate as parametrized by a broken exponential function.
+            Default values are chosen as best fit from SFR of Vangioni+15
             Normalization is done on the same SFR, yielding units of yr-1 Mpc-3
         """
         if isinstance(z, np.ndarray):
-            w = np.where(z > zm)[0]
-            rate = np.exp(a*z)
-            rate[w] = np.exp(b*z[w]) * np.exp((a-b)*zm)
+            rate = np.where(z <= zm,
+                            np.exp(a*z),
+                            np.exp(b*z) * np.exp((a-b)*zm))
         else:
             if z <= zm:
                 rate = np.exp(a*z)

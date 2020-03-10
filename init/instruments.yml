@@ -1,4 +1,4 @@
-name: ['BATSE','BAT','FREGATE','WXM','GBM', 'ECLAIRs','BATSE_5B']
+# name: ['BATSE','BAT','FREGATE','WXM','GBM', 'ECLAIRs','BATSE_5B']
 BATSE:
   Emin: 50.  # keV
   Emax: 300. # kev

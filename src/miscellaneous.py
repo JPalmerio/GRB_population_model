@@ -3,8 +3,24 @@ import yaml
 import argparse
 import numpy as np
 import pandas as pd
+import observational_constraints as obs
 
 log = logging.getLogger(__name__)
+
+
+def create_config(config, samples, instruments, obs_constraints):
+    """
+        Filter the samples, instruments, and observation constraint
+        dictionaries to return only the ones included in the config.
+        The samples, instruments and obs_constraints inputs represent
+        all possible choices, and the specific ones to be used are
+        specified by the user in the config file.
+    """
+    incl_samples = included_samples(config['samples'], samples)
+    incl_instruments = included_instruments(incl_samples, instruments)
+    incl_constraints = included_constraints(config['constraints'], obs_constraints)
+    incl_constraints = obs.load_observational_constraints(incl_constraints)
+    return incl_samples, incl_instruments, incl_constraints
 
 
 def included_samples(config_samples, samples):
@@ -23,13 +39,30 @@ def included_samples(config_samples, samples):
     return incl_samples
 
 
+def included_constraints(config_constr, constraints):
+    """
+        Create the list of the instruments which will be needed by the
+        code, given the samples required by the user.
+    """
+    try:
+        incl_constraints = {constr_name: constraints[constr_name] for constr_name in config_constr}
+    except KeyError as e:
+        raise ValueError(f"Constraint {e} does not exist."
+                         f"Possible choices are {list(constraints.keys())}")
+
+    log.info(f"Including constraints: {list(incl_constraints.keys())}")
+    log.debug("Including constraints:\n" + str(yaml.dump(incl_constraints, indent=4)))
+
+    return incl_constraints
+
+
 def included_instruments(incl_samples, instruments):
     """
         Create the list of the instruments which will be needed by the
         code, given the samples required by the user.
     """
-    incl_instruments = {incl_samples[s]['instrument']:
-                        instruments[incl_samples[s]['instrument']] for s in incl_samples}
+    incl_instruments = {incl_samples[s]['instrument']: instruments[incl_samples[s]['instrument']]
+                        for s in incl_samples}
 
     log.info(f"Including instruments: {list(incl_instruments.keys())}")
     log.debug("Including instruments:\n" + str(yaml.dump(incl_instruments, indent=4)))

@@ -13,7 +13,7 @@ COPY ./init/ /home/init
 COPY ./observational_constraints/ /home/observational_constraints
 
 RUN mkdir /home/model_outputs
-VOLUME ./model_outputs /home/model_outputs
+VOLUME /home/model_outputs
 
 WORKDIR /home/
 RUN cd src; make; cd ..

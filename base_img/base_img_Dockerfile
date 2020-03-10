@@ -15,4 +15,5 @@ RUN pip3 install --upgrade pip \
     && pip3 install "astroML==0.4.1" \
     && pip3 install "pyyaml==5.1"\
     && pip3 install corner\
-    && pip3 install emcee
+    && pip3 install emcee\
+    && rm -rf ${HOME}/.cache/pip
