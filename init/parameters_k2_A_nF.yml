@@ -32,4 +32,4 @@ t90obs_distribution:
 Cvar_distribution:
     mu: 0.04
     sigma: 0.22
-    correl_slope: 0.413
+    correl_slope: -0.413

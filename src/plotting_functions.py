@@ -81,7 +81,7 @@ def plot_EpGBM(fname=None, log=True, density=False, ax=None, **kwargs):
         Convenience function to plot the EpGBM constraint on a given ax
     """
     if fname is None:
-        fname = root_dir/'observational_constraints/EpGBM_for_plotting.txt'
+        fname = root_dir/'observational_constraints/EpGBM.txt'
     if ax is None:
         ax = plt.gca()
     bins, obs_lin, err_lin = obs.create_EpGBM_hist(fname, density=density, bins_log=log)
@@ -94,7 +94,7 @@ def plot_EpGBM(fname=None, log=True, density=False, ax=None, **kwargs):
 
 
 def plot_SHOALS_distr(df_mod, key, SHOALS_file=None, cumul=False, ax=None, plot_obs=True,
-                      mod_color='C0', mod_label='Model', bins=None, log=False, **kwargs):
+    mod_color='C0', mod_label='Model', bins=None, log=False, **kwargs):
 
     if ax is None:
         fig, ax = plt.subplots(figsize=(10,8))
@@ -343,7 +343,7 @@ def cool_hist2d(x, y, c=None, mode='scatter', xlabel=None, ylabel=None, cb=True,
 
 
 def plot_obs_property(fname, key, func=None, func_args={}, ax=None, log=False, kde=True,
-                      header=2, verbose=False, debug=False, errors='raise', **kwargs):
+    header=2, verbose=False, debug=False, errors='raise', **kwargs):
     """
         Convenience function to quickly plot an observed sample from a given file name.
         A function to filter or cut the sample can be passed as func.
@@ -390,7 +390,7 @@ def plot_eBAT6_EpL(fname=None, axes=None, fname_lim=None, mini_cax=False, kde=Fa
     if fname is None:
         fname = root_dir/'catalogs/BAT6_cat/eBAT6_cat.txt'
     if fname_lim is None:
-        fname_lim = root_dir/'observational_constraints/BAT6_detection_limit_EpL_plane.txt'
+        fname_lim = root_dir/'resources/BAT6_detection_limit_EpL_plane.txt'
 
     if axes is None:
         fig, axes = fig_marg(figsize=(10, 8), cb=True)
@@ -490,15 +490,15 @@ def plot_CDF_with_bounds(bins_mid, median, lower, upper, ax, **kwargs):
     top_line = Line2D([xmax, xmax+(xmax-xmin)], [median[imax],median[imax]],
                       color=plot_color, linestyle=plot_ls, linewidth=plot_lw, zorder=plot_zorder)
     ax.add_line(top_line)
-    ax.fill_between(bins_mid, lower, upper, step='mid', color=plot_color, alpha=0.3)
-    ax.plot(bins_mid, lower, drawstyle='steps-mid',lw=0.7, c=plot_color)
-    ax.plot(bins_mid, upper, drawstyle='steps-mid',lw=0.7, c=plot_color)
+    ax.fill_between(bins_mid, lower, upper, step='mid', color=plot_color, alpha=0.3, zorder=plot_zorder-1)
+    ax.plot(bins_mid, lower, drawstyle='steps-mid',lw=0.7, c=plot_color, zorder=plot_zorder-1)
+    ax.plot(bins_mid, upper, drawstyle='steps-mid',lw=0.7, c=plot_color, zorder=plot_zorder-1)
     ax.legend()
     return
 
 
 def plot_CDFs_and_KS_results(bins, med1, med2, lw1, lw2, up1, up2, D_stat, p_value, confidence,
-                             pfrac=None, label1=None, label2=None):
+                             pfrac=None, label1=None, label2=None, color1=None, color2=None):
     fig = plt.figure(figsize=(10,8),tight_layout=True)
     gs = gridspec.GridSpec(2, 2, height_ratios=[2, 1], width_ratios=[1,1])
     ax = fig.add_subplot(gs[0,:])
@@ -508,18 +508,18 @@ def plot_CDFs_and_KS_results(bins, med1, med2, lw1, lw2, up1, up2, D_stat, p_val
     ax.set_ylabel('CDF')
     axD.set_xlabel('D-stat')
     axp.set_xlabel('log(p-value)')
-    axD.hist(D_stat, bins=20, color='C2', density=True)
+    axD.hist(D_stat, bins=20, color='lightgray', density=True)
     if pfrac is None:
         pfrac = len(p_value[np.where(p_value < (1.-confidence/100.))[0]])/len(p_value)
 
     plabel = r"{:.2f} \% below {:.2f}".format(100*pfrac, 1.-confidence/100.)
-    axp.hist(np.log10(p_value), bins=20, color='C2', density=True)
-    axp.axvline(np.log10(1.-confidence/100.), ls='--', color='gray', label=plabel)
+    axp.hist(np.log10(p_value), bins=20, color='lightgray', density=True)
+    axp.axvline(np.log10(1.-confidence/100.), ls='--', color='k', label=plabel)
     axp.legend()
 
     bins_mid = 0.5*(bins[1:]+bins[:-1])
-    plot_CDF_with_bounds(bins_mid, med1, lw1, up1, ax=ax, label=label1)
-    plot_CDF_with_bounds(bins_mid, med2, lw2, up2, ax=ax, label=label2)
+    plot_CDF_with_bounds(bins_mid, med1, lw1, up1, ax=ax, label=label1, color=color1)
+    plot_CDF_with_bounds(bins_mid, med2, lw2, up2, ax=ax, label=label2, color=color2)
     ax.set_ylim(0,1)
     return
 

@@ -78,7 +78,7 @@ def unbinned_empirical_cdf(data, weights=1):
 
 
 def subsample_and_KS(df1, df2, N_sub, key, confidence=95.0, N_bs=100, precision=500, bins=None,
-    show_plot=False, label1=None, label2=None, subsample1=True, subsample2=True):
+    show_plot=False, label1=None, label2=None, subsample1=True, subsample2=True, color1=None, color2=None):
     """
         Compute the K-S test between a subsample of size N_sub.
         Repeat the K-S test for N_bs bootstraps and create a distribution of p-values.
@@ -114,8 +114,15 @@ def subsample_and_KS(df1, df2, N_sub, key, confidence=95.0, N_bs=100, precision=
     pfrac = len(p_value[np.where(p_value < (1.-confidence/100.))[0]])/len(p_value)
 
     if show_plot:
-        pf.plot_CDFs_and_KS_results(bins, med1, med2, lw1, lw2, up1, up2, D_stat, p_value, confidence,
-                                    pfrac, label1, label2)
+        pf.plot_CDFs_and_KS_results(bins=bins, med1=med1, med2=med2, lw1=lw1, lw2=lw2, up1=up1, up2=up2,
+                                    D_stat=D_stat,
+                                    p_value=p_value,
+                                    confidence=confidence,
+                                    pfrac=pfrac,
+                                    label1=label1,
+                                    label2=label2,
+                                    color1=color1,
+                                    color2=color2)
 
     return pfrac
 

@@ -467,8 +467,7 @@ def calc_det_prob(GRB_prop, incl_samples, **ECLAIRs_args):
         t1 = time.time()
 
         if name == 'ECLAIRs':
-            cts = GRB_prop['_'.join(['pht_cts', instr_name])]
-            condition = (cts >= properties['pflx_min'])
+            cts = np.asarray(GRB_prop['_'.join(['pht_cts', instr_name])])
             pdet_tot, pdet_cts, pdet_flnc = calc_det_prob_SVOM(cts=cts,
                                                                t90obs=GRB_prop['t90obs'],
                                                                Cvar=GRB_prop['Cvar'],

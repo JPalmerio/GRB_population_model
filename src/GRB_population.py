@@ -22,9 +22,17 @@ except ImportError:
 
 
 class GRBPopulation:
-    def __init__(self, Nb_GRBs, output_dir=None):
-        self.Nb_GRBs = Nb_GRBs
-        self.properties = pd.DataFrame({})
+    def __init__(self, Nb_GRBs=None, properties=None, output_dir=None):
+        if Nb_GRBs is None and properties is None:
+            raise ValueError("You must either specify Nb_GRBs or properties to instanciate this class.")
+        elif Nb_GRBs is not None and properties is None:
+            self.Nb_GRBs = Nb_GRBs
+            self.properties = pd.DataFrame({})
+        elif Nb_GRBs is None and properties is not None:
+            if not isinstance(properties, pd.DataFrame):
+                raise ValueError("Properties must be a pandas DataFrame instance.")
+            self.Nb_GRBs = len(properties)
+            self.properties = properties
         self.mock_constraints = {}
         self.likelihood_params = {}
         if output_dir is None:
@@ -142,6 +150,7 @@ class GRBPopulation:
             log.warning(f'Raised exception {e}')
 
         self.properties['z'] = z
+        self.properties['D_L'] = Lum_dist(z, cosmo)
 
         if run_mode == 'debug':
             log.info("Debug mode activated; plotting z pdf")
@@ -258,34 +267,6 @@ class GRBPopulation:
                 self.save_fig(fig, 'alpha_beta_draw.pdf')
         return alpha.copy(), beta.copy(), ktild.copy()
 
-    def draw_t90obs(self, Nb_GRBs=None, run_mode=None, savefig=False, **params):
-        """ Draw t90obs from LogNormal distribution """
-        log.warning("Jesse, you are drawing from T90obs instead of T90intr."
-                    " Make sure you know what you're doing.")
-        if Nb_GRBs is None:
-            Nb_GRBs = self.Nb_GRBs
-        mu_t90obs = params['mu']
-        sigma_t90obs = params['sigma']
-        t90obs = 10.**(np.random.normal(mu_t90obs, sigma_t90obs, Nb_GRBs))
-
-        self.properties['t90obs'] = t90obs
-
-        if run_mode == 'debug':
-            log.info("Debug mode activated; plotting t90obs pdf")
-            fig, ax = plt.subplots(figsize=(6, 5), tight_layout=True)
-            logt90obsmin = mu_t90obs - 5*sigma_t90obs
-            logt90obsmax = mu_t90obs + 5*sigma_t90obs
-            ax.hist(np.log10(t90obs),
-                    bins=np.arange(logt90obsmin, logt90obsmax, 0.1),
-                    density=True, color='lightgray',
-                    label='Drawings', edgecolor='k', linewidth=0.5)
-            ax.set_xlabel('log(t90obs [s])')
-            ax.set_ylabel('t90obs PDF')
-            ax.legend()
-            if savefig:
-                self.save_fig(fig, 't90obs_draw.pdf')
-        return t90obs.copy()
-
     def draw_t90(self, z_med=None, Nb_GRBs=None, run_mode=None, savefig=False, **params):
         """
             Draw t90 from LogNormal distribution corrected by a median
@@ -307,6 +288,12 @@ class GRBPopulation:
         t90 = 10.**(np.random.normal(mu_t90, sigma_t90obs, Nb_GRBs))
 
         self.properties['t90'] = t90
+        try:
+            self.properties['t90obs'] = t90 * (1. + self.properties['z'])
+            t90obs_exists = True
+        except KeyError:
+            log.warning("No T90obs was calculated because 'z' could not be found")
+            t90obs_exists = False
 
         if run_mode == 'debug':
             log.info("Debug mode activated; plotting t90 pdf")
@@ -315,10 +302,17 @@ class GRBPopulation:
             logt90max = mu_t90 + 5*sigma_t90obs
             ax.hist(np.log10(t90),
                     bins=np.arange(logt90min, logt90max, 0.1),
-                    density=True, color='lightgray',
-                    label='Drawings', edgecolor='k', linewidth=0.5)
-            ax.set_xlabel('log(t90 [s])')
-            ax.set_ylabel('t90 PDF')
+                    density=True, color='lightgray', alpha=0.8,
+                    label='T90 Drawings', edgecolor='k', linewidth=0.5)
+            if t90obs_exists:
+                z_med_pop = np.median(self.properties['z'])
+                ax.hist(np.log10(self.properties['t90obs']),
+                        bins=np.arange(logt90min+(np.log10(1+z_med_pop)),
+                                       logt90max+(np.log10(1+z_med_pop)), 0.1),
+                        density=True, color='darkgray', alpha=0.8, zorder=0,
+                        label='T90obs Drawings', edgecolor='k', linewidth=0.5)
+            ax.set_xlabel('log(T90 [s])')
+            ax.set_ylabel('T90 PDF')
             ax.legend()
             if savefig:
                 self.save_fig(fig, 't90_draw.pdf')
@@ -338,7 +332,7 @@ class GRBPopulation:
         sigma_Cvar = params['sigma']
         correl_slope = params['correl_slope']
         t = np.random.normal(mu_Cvar, sigma_Cvar, Nb_GRBs)
-        Cvar = 10.**(t - correl_slope * np.log10(t90obs))
+        Cvar = 10.**(t + correl_slope * np.log10(t90obs))
         Cvar = np.where((Cvar >= 1), np.ones(Cvar.shape), Cvar)
 
         self.properties['Cvar'] = Cvar
@@ -367,25 +361,18 @@ class GRBPopulation:
         self.draw_L(**params['luminosity_function'], run_mode=run_mode, savefig=savefig)
         self.draw_Ep(**params['peak_energy_distribution'], run_mode=run_mode, savefig=savefig)
         self.draw_spec(**params['spectral_shape'], run_mode=run_mode, savefig=savefig)
-        D_L = Lum_dist(self.properties['z'], cosmo)
-        Epobs = self.properties['Ep']/(1. + self.properties['z'])
+        self.properties['Epobs'] = self.properties['Ep']/(1. + self.properties['z'])
 
         # The median redshift of the population of GBM_bright is needed
         # to calculate t90 (which is defined as pht_pflx in BATSE band
         # above 0.9 ph/s/cm2)
-        self.calc_peak_photon_flux(incl_instruments=['BATSE'])
+        self.calc_peak_photon_flux(incl_instruments={'BATSE':{'Emin':50,'Emax':300}})
         GBM_bright_selection = self.properties['pht_pflx_BATSE'] >= 0.9
         z_med = np.median(self.properties[GBM_bright_selection]['z'])
         self.draw_t90(**params['t90obs_distribution'], z_med=z_med, run_mode=run_mode, savefig=savefig)
-        t90obs = self.properties['t90'] * (1. + self.properties['z'])
         self.draw_Cvar(**params['Cvar_distribution'], run_mode=run_mode, savefig=savefig)
 
-        Eiso = self.properties['L'] * self.properties['Cvar'] * self.properties['t90']
-
-        self.properties['D_L'] = D_L
-        self.properties['Epobs'] = Epobs
-        self.properties['Eiso'] = Eiso
-        self.properties['t90obs'] = t90obs
+        self.properties['Eiso'] = self.properties['L'] * self.properties['Cvar'] * self.properties['t90']
 
         if run_mode == 'debug':
             summary = self.summary()
@@ -515,22 +502,28 @@ class GRBPopulation:
         """
         return IMF_norm * nu * a * np.exp(b*(z-zm)) / ((a-b) + b*np.exp(a*(z-zm)))
 
-    def GRBrate_exp(self, z, a=1.1, b=-0.57, zm=1.9, norm=0.00033313):
+    def BExp(z, a=1.1, b=-0.57, zm=1.9, SFR_norm=0.02744, IMF_norm=0.007422):
         """
             GRB rate as parametrized by a broken exponential function.
             Default values are chosen as best fit from SFR of Vangioni+15
-            Normalization is done on the same SFR, yielding units of yr-1 Mpc-3
+            If you leave the default SFR_norm and IMF_norm, the result
+            will be in units of yr-1 Mpc-3.
+            IMF_norm is in units of M_sun-1 and converts the CSFRD (in
+            units of M_sun yr-1 Mpc-3) to a core-collapse rate density (in
+            units of yr-1 Mpc-3).
+            SFR_norm is adjusted on the functional form of Springel-Hernquist
+            (SH) with the parameter values of Vangioni+15.
         """
         if isinstance(z, np.ndarray):
-            rate = np.where(z <= zm,
-                            np.exp(a*z),
-                            np.exp(b*z) * np.exp((a-b)*zm))
+            w = np.where(z > zm)[0]
+            rate = np.exp(a*z)
+            rate[w] = np.exp(b*z[w]) * np.exp((a-b)*zm)
         else:
             if z <= zm:
                 rate = np.exp(a*z)
             else:
                 rate = np.exp(b*z) * np.exp((a-b)*zm)
-        return norm*rate
+        return SFR_norm*IMF_norm*rate
 
     def create_mock_constraint(self, obs_constraints=None):
         """
@@ -641,9 +634,9 @@ class GRBPopulation:
         summary += full_width * thick_line + "\n"
         # General configuration
         _Nb_GRBs_string = f"Nb_GRBs =".rjust(half_width)
-        _Nb_GRBs = f" {self.Nb_GRBs:.2e}".ljust(half_width+1)
+        _Nb_GRBs = f" {self.Nb_GRBs:.2e}".ljust(half_width)
         _output_dir_string = f"Output directory =".rjust(half_width)
-        _output_dir = f" {self.output_dir.stem}".ljust(half_width+1)
+        _output_dir = f" {self.output_dir.stem}".ljust(half_width)
         summary += sides + _Nb_GRBs_string + _Nb_GRBs + sides + "\n"
         summary += sides + _output_dir_string + _output_dir + sides + "\n"
         summary += full_width * thick_line + "\n"

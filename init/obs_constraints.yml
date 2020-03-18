@@ -24,5 +24,5 @@ Kommers:
   val_min: 0.18 # ph/s/cm2 in 50-300 keV
   prop_min: 'pht_pflx_BATSE'
   quantity: 'pht_pflx_BATSE'
-  sum_ln_oi_factorial: 0.0
+  sum_ln_oi_factorial: 6870.371682542675
   last_bin: 20.0

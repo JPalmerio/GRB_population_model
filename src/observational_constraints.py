@@ -30,13 +30,15 @@ def read_constraint(name):
         A convenience function to read the observational constraint from
         a file
     """
-    valid_names = ['Stern', 'EpGBM', 'eBAT6']
+    valid_names = ['Stern', 'EpGBM', 'eBAT6', 'Kommers']
     if name == 'Stern':
         return create_Stern_hist_for_lnL()
     elif name == 'EpGBM':
         return create_EpGBM_hist()
     elif name == 'eBAT6':
         return create_eBAT6_hist()
+    elif name == 'Kommers':
+        return create_Kommers_hist()
     else:
         raise ValueError('Constraint name must be one of {}'.format(valid_names))
 
@@ -165,6 +167,40 @@ def create_eBAT6_hist(fname=None, density=False, verbose=False, eBAT6_weight=10)
                 ln_oi += val*np.log(val) - val
         ln_oi *= eBAT6_weight
         print(f"ln(o_i!) = {ln_oi} from eBAT6 histogram")
+
+    return bins, hist, err
+
+
+def create_Kommers_hist(fname=None, verbose=False, density=False, bins_log=False):
+    """
+        Create the histogram from Kommers et al. 2000 catalog of BATSE
+        bursts.
+        If density is true, hist is returned as :
+        delta_N / (N_EpGBM * delta_log_bin)
+    """
+    if fname is None:
+        fname = root_dir/'observational_constraints/Kommers.txt'
+
+    bins = read_column(fname, 0, array=False)
+    hist = read_column(fname, 1)
+    err = np.sqrt(hist)
+    bins.append(20)  # append right edge of last bin
+    bins = np.array(bins)
+
+    if verbose:
+        ln_oi = 0.
+        for i, val in enumerate(hist):
+            ln_oi += val*np.log(val) - val
+        print(f"ln(o_i!) = {ln_oi} from Kommers histogram")
+
+    if bins_log:
+        bins = np.log10(bins)
+
+    if density:
+        N_Kommers = hist.sum()
+        delta_bin = bins[1:]-bins[:-1]
+        hist /= (N_Kommers * delta_bin)
+        err /= (N_Kommers * delta_bin)
 
     return bins, hist, err
 
