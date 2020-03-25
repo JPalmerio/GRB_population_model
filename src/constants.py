@@ -43,3 +43,11 @@ MeVperc2     = 1.78266270e-27    # g
 Jy           = 1.e-23            # erg/cm2/s/Hz
 mJy          = 1.e-26            # erg/cm2/s/Hz
 microJy      = 1.e-29            # erg/cm2/s/Hz
+
+
+# Specific to GRBs
+T_live_BATSE    = 6.54           # years (Goldstein et al. 2013)
+T_BATSE_mission = 9.1            # years (Stern et al. 2001)
+Omega_BATSE     = 0.7 * 4. * Pi  # years (Stern et al. 2001)
+R_tot_BATSE     = 1110.          # LGRBs per year in 4 pi above 0.066825 ph/s/cm2 from Stern et al. 2001
+R_tot_BATSE_err = 40.            # LGRBs per year in 4 pi above 0.066825 ph/s/cm2

@@ -1,73 +1,9 @@
 import logging
-import yaml
-import argparse
 import numpy as np
 import pandas as pd
-import observational_constraints as obs
+from io_grb_pop import root_dir, read_logRlogN
 
 log = logging.getLogger(__name__)
-
-
-def create_config(config, samples, instruments, obs_constraints):
-    """
-        Filter the samples, instruments, and observation constraint
-        dictionaries to return only the ones included in the config.
-        The samples, instruments and obs_constraints inputs represent
-        all possible choices, and the specific ones to be used are
-        specified by the user in the config file.
-    """
-    incl_samples = included_samples(config['samples'], samples)
-    incl_instruments = included_instruments(incl_samples, instruments)
-    incl_constraints = included_constraints(config['constraints'], obs_constraints)
-    incl_constraints = obs.load_observational_constraints(incl_constraints)
-    return incl_samples, incl_instruments, incl_constraints
-
-
-def included_samples(config_samples, samples):
-    """
-        Create the list of the sample names which will be used by the
-        code.
-    """
-    try:
-        incl_samples = {sample_name: samples[sample_name] for sample_name in config_samples}
-    except KeyError as e:
-        raise ValueError(f"Sample {e} does not exist. Possible samples are {list(samples.keys())}")
-
-    log.info(f"Including samples: {list(incl_samples.keys())}")
-    log.debug("Including samples:\n" + str(yaml.dump(incl_samples, indent=4)))
-
-    return incl_samples
-
-
-def included_constraints(config_constr, constraints):
-    """
-        Create the list of the instruments which will be needed by the
-        code, given the samples required by the user.
-    """
-    try:
-        incl_constraints = {constr_name: constraints[constr_name] for constr_name in config_constr}
-    except KeyError as e:
-        raise ValueError(f"Constraint {e} does not exist."
-                         f"Possible choices are {list(constraints.keys())}")
-
-    log.info(f"Including constraints: {list(incl_constraints.keys())}")
-    log.debug("Including constraints:\n" + str(yaml.dump(incl_constraints, indent=4)))
-
-    return incl_constraints
-
-
-def included_instruments(incl_samples, instruments):
-    """
-        Create the list of the instruments which will be needed by the
-        code, given the samples required by the user.
-    """
-    incl_instruments = {incl_samples[s]['instrument']: instruments[incl_samples[s]['instrument']]
-                        for s in incl_samples}
-
-    log.info(f"Including instruments: {list(incl_instruments.keys())}")
-    log.debug("Including instruments:\n" + str(yaml.dump(incl_instruments, indent=4)))
-
-    return incl_instruments
 
 
 def log_to_lin(log_x, log_x_errp, log_x_errm=None):
@@ -121,7 +57,8 @@ def lin_to_log_ndarray(x):
     return log_x
 
 
-def filter_df(df, filtering_key, lim_min=None, lim_max=None, equal=None, errors='raise', strip=None, string=False):
+def filter_df(df, filtering_key, lim_min=None, lim_max=None, equal=None,
+    errors='raise', strip=None, string=False):
     """
         Filter a df using a criteria based on filtering_key
     """
@@ -233,10 +170,39 @@ def calc_rel_errors_GBM_band(df_obs):
     return df_obs
 
 
+def global_GRB_rate_Stern():
+    """
+        Calculate the global LGRB rate by correcting the Stern histogram
+        with the efficiency correction [Stern et al. 2001]
+        (https://ui.adsabs.harvard.edu/abs/2001ApJ...563...80S/abstract)
+        Eq. 5. and summing over all the bins
+    """
+    fname = root_dir/'resources/Stern_logRlogN.txt'
+
+    bins, hist_obs, err_obs = read_logRlogN(fname)
+    delta_bins = np.log10(bins[1:]/bins[:-1])
+    all_sky_glob_rate = np.sum(10**(hist_obs)*delta_bins)
+
+    log.info(''.join([f"Global LGRB rate from Stern constraint: {all_sky_glob_rate:.2f} ",
+             f"GRB/yr in 4 pi with peak flux in [50-300 keV] above {bins.min()} ph/s/cm2"]))
+
+    return all_sky_glob_rate
+
+
+def efficiency_correction_Stern(pflx, c_e0=0.097, nu=2.34, norm=0.7):
+    """
+        The efficiency function of BATSE for detecting GRBs as a function of peak flux, derived by Stern+01
+        c_e0 is in [counts/s/cm2]
+        pflx is in [ph/s/cm2]
+    """
+    c_e = pflx * 0.75  # the conversion factor from counts to pflx comes from the Stern+01 paper as well, figure 7.
+    return norm * (1.0 - np.exp(-(c_e/c_e0)**2))**nu
+
+
 def str2bool(s):
     if s.lower() in ('yes', 'true', 't', 'y', '1'):
         return True
     elif s.lower() in ('no', 'false', 'f', 'n', '0'):
         return False
     else:
-        raise argparse.ArgumentTypeError('Boolean value expected')
+        raise TypeError('Boolean value expected')

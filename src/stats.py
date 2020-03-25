@@ -3,9 +3,32 @@ import logging
 import numpy as np
 from scipy.stats import mstats, ks_2samp
 from astroML.utils import check_random_state
-import plotting_functions as pf
+from plotting_functions import plot_CDFs_and_KS_results
+from io_grb_pop import read_column
 
 log = logging.getLogger(__name__)
+
+
+def draw_from_cdf_file(filename, N_draws, **args):
+    """
+        Draw from an ascii file that contains two columns:
+        x, CDF(x)
+    """
+    value_range = read_column(filename, 0)
+    cdf = read_column(filename, 1)
+    draws = np.random.rand(N_draws)
+    values = value_range[cdf.searchsorted(draws)]
+    return values
+
+
+def create_pdf_from_cdf_file(filename, **args):
+    x = read_column(filename, 0, **args)
+    cdf = read_column(filename, 1, **args)
+    pdf = np.zeros(len(cdf))
+    pdf = cdf[1:]-cdf[:-1]
+    for i in range(1,len(cdf)):
+        pdf[i] = cdf[i]-cdf[i-1]
+    return x, pdf
 
 
 def pBIL(mod, obs, epsilon=1e-3, sum_ln_oi_factorial=None, verbose=False):
@@ -77,7 +100,7 @@ def unbinned_empirical_cdf(data, weights=1):
     return sorted_data, CDF
 
 
-def subsample_and_KS(df1, df2, N_sub, key, confidence=95.0, N_bs=100, precision=500, bins=None,
+def subsample_and_KS(df1, df2, N_sub, key, confidence=95.0, N_bs=100, precision=500, bins=None, create_CDF=True,
     show_plot=False, label1=None, label2=None, subsample1=True, subsample2=True, color1=None, color2=None):
     """
         Compute the K-S test between a subsample of size N_sub.
@@ -103,26 +126,27 @@ def subsample_and_KS(df1, df2, N_sub, key, confidence=95.0, N_bs=100, precision=
     t2 = time.time()
     log.info(f"KS calculations done in {t2-t1:.3f} s")
 
-    t1 = time.time()
-    CDF1 = CDF_with_bootstrap(subsamp1, bins=bins)
-    CDF2 = CDF_with_bootstrap(subsamp2, bins=bins)
-    med1, lw1, up1 = compute_CDF_quantiles(CDF1, confidence=confidence)
-    med2, lw2, up2 = compute_CDF_quantiles(CDF2, confidence=confidence)
-    t2 = time.time()
-    log.info(f"CDF calculation done in {t2-t1:.3f} s")
+    if create_CDF:
+        t1 = time.time()
+        CDF1 = CDF_with_bootstrap(subsamp1, bins=bins)
+        CDF2 = CDF_with_bootstrap(subsamp2, bins=bins)
+        med1, lw1, up1 = compute_CDF_quantiles(CDF1, confidence=confidence)
+        med2, lw2, up2 = compute_CDF_quantiles(CDF2, confidence=confidence)
+        t2 = time.time()
+        log.info(f"CDF calculation done in {t2-t1:.3f} s")
 
     pfrac = len(p_value[np.where(p_value < (1.-confidence/100.))[0]])/len(p_value)
 
     if show_plot:
-        pf.plot_CDFs_and_KS_results(bins=bins, med1=med1, med2=med2, lw1=lw1, lw2=lw2, up1=up1, up2=up2,
-                                    D_stat=D_stat,
-                                    p_value=p_value,
-                                    confidence=confidence,
-                                    pfrac=pfrac,
-                                    label1=label1,
-                                    label2=label2,
-                                    color1=color1,
-                                    color2=color2)
+        plot_CDFs_and_KS_results(bins=bins, med1=med1, med2=med2, lw1=lw1, lw2=lw2, up1=up1, up2=up2,
+                                 D_stat=D_stat,
+                                 p_value=p_value,
+                                 confidence=confidence,
+                                 pfrac=pfrac,
+                                 label1=label1,
+                                 label2=label2,
+                                 color1=color1,
+                                 color2=color2)
 
     return pfrac
 
@@ -325,7 +349,7 @@ def compute_CDF_bounds_by_MC(sample, sample_errp, sample_errm=None, sample_ll=No
         raise TypeError('sample must be numpy array.')
 
     if verbose:
-        print("[INFO] in compute_CDF_bounds_by_MC: initializing...")
+        log.info("In compute_CDF_bounds_by_MC: initializing...")
     # If plot is demanded but no ax is given, create figure and plot also indivudal points' PDFs
     if show_plot and (ax is None):
         fig = plt.figure(figsize=(8,5))
@@ -409,7 +433,7 @@ def compute_CDF_bounds_by_MC(sample, sample_errp, sample_errm=None, sample_ll=No
     sample_pdf = np.zeros((precision_pdf,sample_len))
 
     if verbose:
-        print("[INFO] in compute_CDF_bounds_by_MC: starting Monte Carlo drawings...")
+        log.info("In compute_CDF_bounds_by_MC: starting Monte Carlo drawings...")
     # For every point in the sample:
     # - Generate N_MC realizations of its value following an asymmetric gaussian pdf with standard deviations being the errors on the point
     # - Calculate its PDF
@@ -477,7 +501,7 @@ def compute_CDF_bounds_by_MC(sample, sample_errp, sample_errm=None, sample_ll=No
         sample_bootstrapped = np.zeros(sample_real.shape)
         weights_bootstrapped = np.zeros(weights_real.shape)
         if verbose:
-            print("[INFO] in compute_CDF_bounds_by_MC: starting bootstraps...")
+            log.info("In compute_CDF_bounds_by_MC: starting bootstraps...")
         for i in range(N_MC):
             sample_bootstrapped[i] = sample_real[i][ind[i]]
             weights_bootstrapped[i] = weights_real[i][ind[i]]
@@ -486,7 +510,7 @@ def compute_CDF_bounds_by_MC(sample, sample_errp, sample_errm=None, sample_ll=No
         weights_bootstrapped = weights_real
 
     if verbose:
-        print("[INFO] in compute_CDF_bounds_by_MC: computing CDF...")
+        log.info("In compute_CDF_bounds_by_MC: computing CDF...")
 
     # Compute the PDF and CDF for each realization
     CDF_real = np.zeros((N_MC,precision))
@@ -508,7 +532,7 @@ def compute_CDF_bounds_by_MC(sample, sample_errp, sample_errm=None, sample_ll=No
 
     if show_plot:
         if verbose:
-            print("[INFO] in compute_CDF_bounds_by_MC: plotting...")
+            log.info("In compute_CDF_bounds_by_MC: plotting...")
         if show_median:
             artist, = ax1.plot(bins_mid, median, drawstyle='steps-mid', c=color, **kwargs)
             # Add the first and last line to make the plot look better
@@ -598,17 +622,17 @@ def asym_gaussian_draw(mu, sigma1, sigma2, nb_draws=1000, precision=500, positiv
     if sigma1 == 0.:
         if mu == 0:
             sigma1 = 1e-9
-            print('[WARNING] in asym_gaussian_draw: sigma1 and mu are equal to zero, replacing sigma1 by 1e9')
+            log.warning('In asym_gaussian_draw: sigma1 and mu are equal to zero, replacing sigma1 by 1e9')
         else:
             sigma1 = 1e-9 * mu
-            print('[WARNING] in asym_gaussian_draw: sigma1 is equal to zero, replacing sigma1 by mu * 1e9')
+            log.warning('In asym_gaussian_draw: sigma1 is equal to zero, replacing sigma1 by mu * 1e9')
     if sigma2 == 0.:
         if mu == 0:
             sigma2 = 1e-9
-            print('[WARNING] in asym_gaussian_draw: sigma2 and mu are equal to zero, replacing sigma2 by 1e9')
+            log.warning('In asym_gaussian_draw: sigma2 and mu are equal to zero, replacing sigma2 by 1e9')
         else:
             sigma2 = 1e-9 * mu
-            print('[WARNING] in asym_gaussian_draw: sigma2 is equal to zero, replacing sigma2 by mu * 1e9')
+            log.warning('In asym_gaussian_draw: sigma2 is equal to zero, replacing sigma2 by mu * 1e9')
 
     # limits
     x_min = mu - 10.*sigma1
@@ -655,17 +679,17 @@ def asym_gaussian_pdf(mu, sigma1, sigma2, x_min=None, x_max=None, cumulative=Fal
     if sigma1 == 0.:
         if mu == 0:
             sigma1 = 1e-9
-            print('[WARNING] in asym_gaussian_pdf: sigma1 and mu are equal to zero, replacing sigma1 by 1e9')
+            log.warning('In asym_gaussian_pdf: sigma1 and mu are equal to zero, replacing sigma1 by 1e9')
         else:
             sigma1 = 1e-9 * mu
-            print('[WARNING] in asym_gaussian_pdf: sigma1 is equal to zero, replacing sigma1 by mu * 1e9')
+            log.warning('In asym_gaussian_pdf: sigma1 is equal to zero, replacing sigma1 by mu * 1e9')
     if sigma2 == 0.:
         if mu == 0:
             sigma2 = 1e-9
-            print('[WARNING] in asym_gaussian_pdf: sigma2 and mu are equal to zero, replacing sigma2 by 1e9')
+            log.warning('In asym_gaussian_pdf: sigma2 and mu are equal to zero, replacing sigma2 by 1e9')
         else:
             sigma2 = 1e-9 * mu
-            print('[WARNING] in asym_gaussian_pdf: sigma2 is equal to zero, replacing sigma2 by mu * 1e9')
+            log.warning('In asym_gaussian_pdf: sigma2 is equal to zero, replacing sigma2 by mu * 1e9')
 
     # limits
     if x_min is None:

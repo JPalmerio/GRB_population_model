@@ -15,7 +15,7 @@ except ImportError:
 
 
 def Eiso(L, z, Cvar, t90obs, Ep, alpha, beta, ktild, Emin, Emax,
-         precision=100, f90=True, **extra_args):
+    precision=100, f90=True, **extra_args):
     """
         Returns the source frame isotropic equivalent energy in [erg]
         between Emin and Emax.
@@ -110,7 +110,7 @@ def xBtild(x, ktild, alpha, beta, spec='Band'):
 
 
 def Pht_flux(L, z, Ep, D_L, alpha, beta, ktild, Emin, Emax,
-             precision=100, f90=True, **extra_args):
+    precision=100, f90=True, **extra_args):
     """
         Returns the photon flux in [ph/cm2/s] between Emin and Emax.
         L    : erg/s
@@ -150,7 +150,7 @@ def Pht_flux(L, z, Ep, D_L, alpha, beta, ktild, Emin, Emax,
 
 
 def Erg_flux(L, z, Ep, D_L, alpha, beta, ktild, Emin, Emax,
-             precision=100, f90=True, **extra_args):
+    precision=100, f90=True, **extra_args):
     """
         Returns the energy flux in [erg/cm2/s] between Emin and Emax.
         L    : erg/s
@@ -242,7 +242,7 @@ def Cts_flux_ECLAIRs(L, z, Ep, D_L, alpha, beta, ktild, Emin, Emax, eff_area_A_t
 
 
 def Erg_flux_ECLAIRs(L, z, Ep, D_L, alpha, beta, ktild, Emin, Emax, eff_area_A_tot, eff_area_E_tot,
-                     precision=100, f90=True, **extra_args):
+    precision=100, f90=True, **extra_args):
     """
         Calculate the amount of energy per second per square centimeter
         [erg/cm2/s] between Emin and Emax.
@@ -297,7 +297,7 @@ def calc_peak_photon_flux(GRB_prop, incl_instruments, ECLAIRs_prop=None, f90=Tru
         over a 1s time interval)
     """
 
-    log.debug(f"Starting calculations of peak photon fluxes...")
+    log.info(f"Starting calculations of peak photon fluxes...")
 
     for name, properties in incl_instruments.items():
         Emin = properties['Emin']
@@ -328,7 +328,7 @@ def calc_peak_energy_flux(GRB_prop, incl_instruments, ECLAIRs_prop=None, f90=Tru
         over a 1s time interval)
     """
 
-    log.debug(f"Starting calculations of peak energy fluxes...")
+    log.info(f"Starting calculations of peak energy fluxes...")
 
     for name, properties in incl_instruments.items():
         Emin = properties['Emin']
@@ -359,13 +359,15 @@ def calc_photon_fluence(GRB_prop, incl_instruments):
         the burst.
     """
 
-    log.debug(f"Starting calculations of photon fluences...")
-
+    log.debug("Starting calculations of photon fluences...")
+    t1 = time.time()
     for name in incl_instruments:
         if name == 'ECLAIRs':
             GRB_prop['_'.join(['pht_flnc', name])] = GRB_prop['t90obs']*GRB_prop['Cvar'] * GRB_prop['_'.join(['pht_cts', name])]
         else:
             GRB_prop['_'.join(['pht_flnc', name])] = GRB_prop['t90obs']*GRB_prop['Cvar'] * GRB_prop['_'.join(['pht_pflx', name])]
+    t2 = time.time()
+    log.debug(f"Done in {t2-t1:.3f} s")
 
     return
 
@@ -377,7 +379,7 @@ def calc_energy_fluence(GRB_prop, incl_instruments):
     """
 
     log.debug(f"Starting calculations of energy fluences...")
-
+    t1 = time.time()
     for name in incl_instruments:
         if name == 'ECLAIRs':
             try:
@@ -393,6 +395,9 @@ def calc_energy_fluence(GRB_prop, incl_instruments):
                 log.error("The following keys are needed to calculate the energy fluence: 't90obs', 'Cvar', '{}'.\
                            Are you sure you have calculated them?".format('_'.join(['erg_pflx', name])))
                 raise
+    t2 = time.time()
+    log.debug(f"Done in {t2-t1:.3f} s")
+
     return
 
 
@@ -449,7 +454,7 @@ def calc_det_prob_SVOM(cts, offax_corr, omega_ECLAIRs, omega_ECLAIRs_tot, t90obs
     return det_prob_tot, det_prob_cts, det_prob_flnc
 
 
-def calc_det_prob(GRB_prop, incl_samples, **ECLAIRs_args):
+def calc_det_prob(GRB_prop, incl_samples, **ECLAIRs_prop):
     """
         Calculate the detection probability of the GRBs for each sample,
         given the peak flux.
@@ -457,7 +462,7 @@ def calc_det_prob(GRB_prop, incl_samples, **ECLAIRs_args):
 
     """
 
-    log.debug("Starting calculations of detection probability...")
+    log.info("Starting calculations of detection probability...")
     Nb_GRBs = len(GRB_prop['z'])
 
     for name, properties in incl_samples.items():
@@ -471,7 +476,7 @@ def calc_det_prob(GRB_prop, incl_samples, **ECLAIRs_args):
             pdet_tot, pdet_cts, pdet_flnc = calc_det_prob_SVOM(cts=cts,
                                                                t90obs=GRB_prop['t90obs'],
                                                                Cvar=GRB_prop['Cvar'],
-                                                               **ECLAIRs_args)
+                                                               **ECLAIRs_prop)
             GRB_prop['_'.join(['pdet', name, 'tot'])] = pdet_tot
             GRB_prop['_'.join(['pdet', name, 'pht_flnc'])] = pdet_flnc
             GRB_prop['_'.join(['pdet', name, 'pht_cts'])] = pdet_cts

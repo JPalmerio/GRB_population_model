@@ -1,15 +1,17 @@
+# General python imports
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 import logging
 import yaml
 from pathlib import Path
-from io_grb_pop import read_column, root_dir
+# GRB population specific imports
+from io_grb_pop import root_dir, load_observational_constraints
 from cosmology import init_cosmology, Lum_dist
-from observational_constraints import load_observational_constraints
-import observational_constraints as obs
-import stats as st
+from constants import R_tot_BATSE, R_tot_BATSE_err, T_live_BATSE
+import functional_forms as ff
 import physics as ph
+import stats as st
 
 log = logging.getLogger(__name__)
 
@@ -23,9 +25,12 @@ except ImportError:
 
 class GRBPopulation:
     def __init__(self, Nb_GRBs=None, properties=None, output_dir=None):
+
         if Nb_GRBs is None and properties is None:
             raise ValueError("You must either specify Nb_GRBs or properties to instanciate this class.")
         elif Nb_GRBs is not None and properties is None:
+            if not isinstance(Nb_GRBs, int):
+                raise TypeError
             self.Nb_GRBs = Nb_GRBs
             self.properties = pd.DataFrame({})
         elif Nb_GRBs is None and properties is not None:
@@ -33,33 +38,41 @@ class GRBPopulation:
                 raise ValueError("Properties must be a pandas DataFrame instance.")
             self.Nb_GRBs = len(properties)
             self.properties = properties
+        self.parameters = {}
         self.mock_constraints = {}
         self.likelihood_params = {}
+        self.normalization = {}
         if output_dir is None:
             self.output_dir = Path().cwd()
         else:
             self.output_dir = output_dir
 
     def draw_L(self, Nb_GRBs=None, model='EPL', z=None, run_mode=None, savefig=False, **params):
-        """ Draw L from a power law """
+        """
+            Draw L from the desired luminosity function
+        """
+
+        self.parameters['luminosity_function'] = {'model':model, **params}
+
         if Nb_GRBs is None:
             Nb_GRBs = self.Nb_GRBs
+
         if model == 'EPL':
             logLmin = params['logLmin']
             logLmax = params['logLmax']
             slope = params['slope']
             k_evol = params['k_evol']
             t = np.random.rand(Nb_GRBs)
-            L = 10.**logLmin*(1. - (1. - (10.**(logLmax-logLmin))**(1.-slope))*t)**(1. / (1.-slope))
+
+            L = 10.**logLmin * (1. - (1. - (10.**(logLmax-logLmin))**(1.-slope))*t)**(1. / (1.-slope))
+
             if k_evol != 0.0:
                 if z is None:
-                    try:
-                        z = self.properties['z']
-                        L *= (1 + z)**k_evol
-                    except KeyError:
-                        raise ValueError('Could not find z to use in L_draw')
-                else:
-                    L *= (1 + z)**k_evol
+                    if 'z' not in self.properties.keys():
+                        raise KeyError('Could not find z to use in draw_L')
+                    z = self.properties['z']
+                L *= (1 + z)**k_evol
+
         elif model == 'ES':
             logLmin = params['logLmin']
             logLbreak = params['logLbreak']
@@ -67,37 +80,51 @@ class GRBPopulation:
             slope = params['slope']
             k_evol = params['k_evol']
             logL_range = np.linspace(logLmin, logLmax, 1000)
-            logL_pdf_unnormed = self.Schechter_log(logL_range, logLbreak=logLbreak, slope=slope)
+            logL_pdf_unnormed = ff.Schechter_log(logL_range, logLbreak=logLbreak, slope=slope)
             logL_pdf = logL_pdf_unnormed / logL_pdf_unnormed.sum()
 
-            try:
-                L = 10.**(np.random.choice(logL_range, size=Nb_GRBs, p=logL_pdf))
-            except Exception as e:
-                L = np.zeros(Nb_GRBs)
-                log.warning(f'Raised exception {e}')
+            L = 10.**(np.random.choice(logL_range, size=Nb_GRBs, p=logL_pdf))
 
             if k_evol != 0.0:
                 if z is None:
                     if 'z' not in self.properties.keys():
                         raise KeyError('Could not find z to use in draw_L')
                     z = self.properties['z']
-                    L *= (1 + z)**k_evol
-                else:
-                    L *= (1 + z)**k_evol
+                L *= (1 + z)**k_evol
+
         elif model == 'EBPL':
-            raise NotImplementedError
+            logLmin = params['logLmin']
+            logLbreak = params['logLbreak']
+            logLmax = params['logLmax']
+            slopeL = params['slopeL']
+            slopeH = params['slopeH']
+            k_evol = params['k_evol']
+            logL_range = np.linspace(logLmin, logLmax, 1000)
+            logL_pdf_unnormed = ff.BPL_lum(logL_range, logLbreak=logLbreak, slopeL=slopeL, slopeH=slopeH)
+            logL_pdf = logL_pdf_unnormed / logL_pdf_unnormed.sum()
+
+            L = 10.**(np.random.choice(logL_range, size=Nb_GRBs, p=logL_pdf))
+
+            if k_evol != 0.0:
+                if z is None:
+                    if 'z' not in self.properties.keys():
+                        raise KeyError('Could not find z to use in draw_L')
+                    z = self.properties['z']
+                L *= (1 + z)**k_evol
         else:
             raise ValueError("Invalid model for L drawing")
 
         self.properties['L'] = L
 
-        if run_mode == 'debug':
+        if run_mode == 'debug' and model != 'EPL':
             log.info("Debug mode activated; plotting L pdf")
+            delta_logL = logL_range[1]-logL_range[0]
             fig, ax = plt.subplots(figsize=(6, 5), tight_layout=True)
             ax.hist(np.log10(L),
                     bins=np.arange(logLmin, logLmax, 0.1),
                     density=True, color='lightgray',
                     label='Drawings', edgecolor='k', linewidth=0.5)
+            ax.plot(logL_range, logL_pdf/delta_logL, label='PDF')
             ax.set_xlabel('log(L [erg/s])')
             ax.set_ylabel('L PDF')
             ax.set_yscale('log')
@@ -108,7 +135,12 @@ class GRBPopulation:
         return L.copy()
 
     def draw_z(self, cosmo=None, Nb_GRBs=None, zmax=20, model='SH', run_mode=None, savefig=False, **params):
-        """ Draw z from a redshift distribution """
+        """
+            Draw z from a redshift distribution
+        """
+
+        self.parameters['redshift_distribution'] = {'model':model, **params}
+
         if Nb_GRBs is None:
             Nb_GRBs = self.Nb_GRBs
 
@@ -127,27 +159,22 @@ class GRBPopulation:
         comoving_volume = dVdz[redshift <= zmax] / (1. + z_range)
 
         if model == 'SH':
-            zm = params['zm']
-            z_a = params['a']
-            z_b = params['b']
-            z_pdf_comov = self.SH(z_range, a=z_a, b=z_b, zm=zm)
-            z_pdf_unnormed = z_pdf_comov * comoving_volume
+            z_pdf_comov = ff.SH(z_range, a=params['a'], b=params['b'], zm=params['zm'])
         elif model == 'BExp':
-            zm = params['zm']
-            z_a = params['a']
-            z_b = params['b']
-            z_pdf_comov = self.GRBrate_exp(z_range, a=z_a, b=z_b, zm=zm)
-            z_pdf_unnormed = z_pdf_comov * comoving_volume
+            z_pdf_comov = ff.BExp(z_range, a=params['a'], b=params['b'], zm=params['zm'])
+        elif model == 'BPL':
+            z_pdf_comov = ff.BPL_z(z_range, a=params['a'], b=params['b'], zm=params['zm'])
+        elif model == 'D06':
+            z_pdf_comov = ff.D06(z_range, a=params['a'], b=params['b'], c=params['c'], d=params['d'])
+        elif model == 'P16':
+            z_pdf_comov = ff.MD(z_range, gamma_0=0.0204, gamma_1=1.8069, gamma_2=3.1724, gamma_3=7.2690)
         else:
             raise NotImplementedError
 
+        z_pdf_unnormed = z_pdf_comov * comoving_volume
         z_pdf = z_pdf_unnormed / z_pdf_unnormed.sum()
 
-        try:
-            z = np.random.choice(z_range, size=Nb_GRBs, p=z_pdf)
-        except Exception as e:
-            z = np.zeros(Nb_GRBs)
-            log.warning(f'Raised exception {e}')
+        z = np.random.choice(z_range, size=Nb_GRBs, p=z_pdf)
 
         self.properties['z'] = z
         self.properties['D_L'] = Lum_dist(z, cosmo)
@@ -163,7 +190,13 @@ class GRBPopulation:
             axes[0].set_yscale('log')
             axes[0].legend()
             axes[1].plot(z_range, z_pdf_comov, label='comoving rate')
-            axes[1].set_ylabel(r'$\rm[yr{-1}\,Mpc^{-3}]$')
+            axes[1].set_ylabel(r'$\rm[yr^{-1}\,Mpc^{-3}]$')
+            if model == 'P16':
+                df = pd.read_csv('../catalogs/BAT6_cat/BAT6ext_GRB_formation_rate.txt',
+                                 sep='\t', header=1, names=['1+z','GRB rate', 'err'])
+                axes[1].errorbar(df['1+z']-1., df['GRB rate']/11, yerr=df['err']/11, fmt='.')
+                axes[1].set_xlim(0,8)
+                axes[1].set_ylabel('Arbitrary units')
             axes[1].legend()
             axes[1].set_xlabel('Redshift')
             axes[1].set_yscale('log')
@@ -172,25 +205,32 @@ class GRBPopulation:
         return z.copy()
 
     def draw_Ep(self, Nb_GRBs=None, model='LN', L=None, run_mode=None, savefig=False, **params):
-        """ Draw Ep from LogNormal distribution """
+        """
+            Draw Ep distribution
+        """
+
+        self.parameters['peak_energy_distribution'] = {'model':model, **params}
+
         if Nb_GRBs is None:
             Nb_GRBs = self.Nb_GRBs
-        Ep0 = params["Ep0"]
-        sigmaEp = params["sigmaEp"]
-        alphaA = params["alpha_amati"]
+
         L0 = 1.6e52  # erg/s
 
-        if model == 'LN':
-            t = np.random.normal(np.log10(Ep0), sigmaEp, Nb_GRBs)
+        if model == 'Fixed':
+            Ep = params["Ep0"]*np.ones(Nb_GRBs)
+
+        elif model == 'LN':
+            t = np.random.normal(np.log10(params["Ep0"]), params["sigmaEp"], Nb_GRBs)
             Ep = 10.**t
+
         elif model == 'A':
+            t = np.random.normal(0, params["sigmaEp"], Nb_GRBs)
             if L is None:
-                try:
-                    L = self.properties['L']
-                except KeyError:
+                if 'L' not in self.properties.keys():
                     raise ValueError("Could not find L for Amati Ep drawing")
-            t = np.random.normal(0, sigmaEp, Nb_GRBs)
-            Ep = Ep0 * (L/L0)**alphaA * 10.**(t * np.sqrt(1. + alphaA**2))
+                L = self.properties['L']
+            Ep = params["Ep0"] * (L/L0)**params["alpha_amati"] * 10.**(t * np.sqrt(1. + params["alpha_amati"]**2))
+
         else:
             raise ValueError("Invalid model for Ep drawing")
 
@@ -199,10 +239,8 @@ class GRBPopulation:
         if run_mode == 'debug':
             log.info("Debug mode activated; plotting Ep pdf")
             fig, ax = plt.subplots(figsize=(6, 5), tight_layout=True)
-            logEpmin = np.log10(Ep0) - 5*sigmaEp
-            logEpmax = np.log10(Ep0) + 5*sigmaEp
             ax.hist(np.log10(Ep),
-                    bins=np.arange(logEpmin, logEpmax, 0.1),
+                    bins=np.arange(-1, 4, 0.1),
                     density=True, color='lightgray',
                     label='Drawings', edgecolor='k', linewidth=0.5)
             ax.set_xlabel('log(Ep [keV])')
@@ -216,6 +254,9 @@ class GRBPopulation:
         """
             Draw the spectral parameters alpha, beta and ktild
         """
+
+        self.parameters['spectral_shape'] = {'model':model, **params}
+
         if Nb_GRBs is None:
             Nb_GRBs = self.Nb_GRBs
 
@@ -224,6 +265,7 @@ class GRBPopulation:
             ktild = _ktild * np.ones(Nb_GRBs)
             alpha = params['alpha'] * np.ones(Nb_GRBs)
             beta = params['beta'] * np.ones(Nb_GRBs)
+
         elif (model == 'GBM_Band_old') or (model == 'GBM_Band'):
             if (model == 'GBM_Band_old'):
                 alpha_file = 'alpha_GBM.txt'
@@ -231,22 +273,19 @@ class GRBPopulation:
             elif (model == 'GBM_Band'):
                 alpha_file = 'good_alpha_GBM.txt'
                 beta_file = 'good_beta_GBM.txt'
-            alpha = self.draw_from_cdf_file(data_dir/alpha_file, N_draws=Nb_GRBs)
-            beta = self.draw_from_cdf_file(data_dir/beta_file, N_draws=Nb_GRBs)
-            # alpha_range, alpha_pdf_unnormed = self.create_pdf_from_cdf(data_dir/alpha_file)
-            # beta_range, beta_pdf_unnormed = self.create_pdf_from_cdf(data_dir/beta_file)
-            # alpha_pdf = alpha_pdf_unnormed/alpha_pdf_unnormed.sum()
-            # beta_pdf = beta_pdf_unnormed/beta_pdf_unnormed.sum()
-            # alpha = np.random.choice(alpha_range, size=Nb_GRBs, p=alpha_pdf)
-            # beta = np.random.choice(beta_range, size=Nb_GRBs, p=beta_pdf)
+
+            alpha = st.draw_from_cdf_file(data_dir/alpha_file, N_draws=Nb_GRBs)
+            beta = st.draw_from_cdf_file(data_dir/beta_file, N_draws=Nb_GRBs)
 
             if (model == 'GBM_Band_old'):  # because of wrong convention
                 alpha = -alpha
                 beta = -beta
                 beta = np.where((beta == 2), 2.01, beta)
+
             ktild = f90f.f90f.calc_ktild(alpha=alpha, beta=beta)
+
         else:
-            raise NotImplementedError
+            raise ValueError("Invalid model for spec drawing")
 
         self.properties['alpha'] = alpha
         self.properties['beta'] = beta
@@ -261,7 +300,7 @@ class GRBPopulation:
                              density=True, color='lightgray',
                              label='Drawings', edgecolor='k', linewidth=0.5)
                 axar[i].set_xlabel(name)
-                axar[i].set_ylabel(name+' PDF')
+                axar[i].set_ylabel(name + ' PDF')
                 axar[i].legend()
             if savefig:
                 self.save_fig(fig, 'alpha_beta_draw.pdf')
@@ -269,18 +308,24 @@ class GRBPopulation:
 
     def draw_t90(self, z_med=None, Nb_GRBs=None, run_mode=None, savefig=False, **params):
         """
-            Draw t90 from LogNormal distribution corrected by a median
-            redshift
+            Draw t90 from LogNormal distribution corrected by the median
+            redshift of the population on which the t90obs distribution
+            was adjusted.
         """
+
+        self.parameters['t90obs_distribution'] = params
+
         if Nb_GRBs is None:
             Nb_GRBs = self.Nb_GRBs
+
         if z_med is None:
-            try:
+            if 'z_med' in params.keys():
                 z_med = params['z_med']
-            except KeyError:
-                z_med = 1.7
+            else:
                 log.warning("In draw_t90, no z_med was found to correct the t90 distribution."
                             " A default value of z_med = 1.7 was used but you should check this.")
+                z_med = 1.7
+
         # Correct the observed mu with the median redshift of the
         # sample on which it was derived
         mu_t90 = params['mu']-np.log10(1.+z_med)
@@ -288,10 +333,11 @@ class GRBPopulation:
         t90 = 10.**(np.random.normal(mu_t90, sigma_t90obs, Nb_GRBs))
 
         self.properties['t90'] = t90
-        try:
+
+        if 'z' in self.properties.keys():
             self.properties['t90obs'] = t90 * (1. + self.properties['z'])
             t90obs_exists = True
-        except KeyError:
+        else:
             log.warning("No T90obs was calculated because 'z' could not be found")
             t90obs_exists = False
 
@@ -302,7 +348,7 @@ class GRBPopulation:
             logt90max = mu_t90 + 5*sigma_t90obs
             ax.hist(np.log10(t90),
                     bins=np.arange(logt90min, logt90max, 0.1),
-                    density=True, color='lightgray', alpha=0.8,
+                    density=True, color='lightgray', alpha=0.7,
                     label='T90 Drawings', edgecolor='k', linewidth=0.5)
             if t90obs_exists:
                 z_med_pop = np.median(self.properties['z'])
@@ -319,13 +365,18 @@ class GRBPopulation:
         return t90.copy()
 
     def draw_Cvar(self, Nb_GRBs=None, t90obs=None, run_mode=None, savefig=False, **params):
-        """ Draw Cvar from t90obs correlated distribution """
+        """
+            Draw Cvar from t90obs correlated distribution
+        """
+
+        self.parameters['Cvar_distribution'] = params
+
         if Nb_GRBs is None:
             Nb_GRBs = self.Nb_GRBs
 
         if t90obs is None:
-            self._check_properties(necessary_prop=['t90obs'],
-                                   func_name='Cvar')
+            if 't90obs' not in self.properties.keys():
+                raise ValueError("Could not find t90obs for Cvar drawing")
             t90obs = self.properties['t90obs']
 
         mu_Cvar = params['mu']
@@ -383,7 +434,8 @@ class GRBPopulation:
     def draw_GRB_properties_for_MCMC(self, cosmo, params, incl_instruments):
         """
             Draw only the core properties necessary to run the MCMC
-            exploration
+            exploration. This method is optimized for speed so not all
+            checks are performed to see if the right input is used.
         """
 
         self.draw_z(**params['redshift_distribution'], cosmo=cosmo)
@@ -391,9 +443,7 @@ class GRBPopulation:
         self.draw_Ep(**params['peak_energy_distribution'])
         self.draw_spec(**params['spectral_shape'])
 
-        D_L = Lum_dist(self.properties['z'], cosmo)
         Epobs = self.properties['Ep']/(1. + self.properties['z'])
-        self.properties['D_L'] = D_L
         self.properties['Epobs'] = Epobs
         # Use the function from physics module to avoid unecessary
         # checks present in the class method
@@ -402,29 +452,26 @@ class GRBPopulation:
 
         return self.properties
 
-    def draw_from_cdf_file(self, filename, N_draws, **args):
-        """
-            Draw from an ascii file that contains two columns:
-            x, CDF(x)
-        """
-        value_range = read_column(filename, 0)
-        cdf = read_column(filename, 1)
-        draws = np.random.rand(N_draws)
-        values = value_range[cdf.searchsorted(draws)]
-        return values
-
-    def calc_peak_photon_flux(self, incl_instruments):
+    def calc_peak_photon_flux(self, incl_instruments, ECLAIRs_prop=None):
         """
             Calculate the peak photon flux for every GRB in the
             population.
         """
         necessary_prop = ['L', 'z', 'Ep', 'alpha', 'beta', 'D_L']
         self._check_properties(necessary_prop, func_name='peak photon flux')
+        # This is to avoid recalculation BATSE pflx if it's already
+        # been calculated for the t90 drawings
+        if 'pht_pflx_BATSE' in self.properties.columns:
+            _incl_instruments = incl_instruments.copy()
+            _incl_instruments.pop('BATSE')
+        else:
+            _incl_instruments = incl_instruments
         ph.calc_peak_photon_flux(GRB_prop=self.properties,
-                                 incl_instruments=incl_instruments)
+                                 incl_instruments=_incl_instruments,
+                                 ECLAIRs_prop=ECLAIRs_prop)
         return
 
-    def calc_peak_energy_flux(self, incl_instruments):
+    def calc_peak_energy_flux(self, incl_instruments, ECLAIRs_prop=None):
         """
             Calculate the peak energy flux for every GRB in the
             population.
@@ -432,7 +479,8 @@ class GRBPopulation:
         necessary_prop = ['L', 'z', 'Ep', 'alpha', 'beta', 'D_L']
         self._check_properties(necessary_prop, func_name='peak energy flux')
         ph.calc_peak_energy_flux(GRB_prop=self.properties,
-                                 incl_instruments=incl_instruments)
+                                 incl_instruments=incl_instruments,
+                                 ECLAIRs_prop=ECLAIRs_prop)
         return
 
     def calc_photon_fluence(self, incl_instruments):
@@ -457,13 +505,13 @@ class GRBPopulation:
                                incl_instruments=incl_instruments)
         return
 
-    def calc_det_prob(self, incl_samples, **ECLAIRs_args):
+    def calc_det_prob(self, incl_samples, **ECLAIRs_prop):
         """
             Calculates the detection probability for the included
             samples
         """
         ph.calc_det_prob(GRB_prop=self.properties,
-                         incl_samples=incl_samples, **ECLAIRs_args)
+                         incl_samples=incl_samples, **ECLAIRs_prop)
         return
 
     def _check_properties(self, necessary_prop, func_name):
@@ -477,55 +525,7 @@ class GRBPopulation:
                 raise KeyError(f"Property {prop} must exist before you attempt to calculate the"
                                f" {func_name}.")
 
-    def create_pdf_from_cdf(self, filename, **args):
-        x = read_column(filename, 0, **args)
-        cdf = read_column(filename, 1, **args)
-        pdf = np.zeros(len(cdf))
-        pdf = cdf[1:]-cdf[:-1]
-        for i in range(1,len(cdf)):
-            pdf[i] = cdf[i]-cdf[i-1]
-        return x, pdf
-
-    def Schechter_log(self, logL, logLbreak, slope):
-        """ Returns the unnormalized Schechter function
-            Expects Lum arguments to be in log scale """
-        x = 10.**(logL - logLbreak)
-        Sch = x**(1.-slope) * np.exp(-x)
-        return Sch
-
-    def SH(self, z, zm=2, a=2.37, b=1.8, nu=0.178, IMF_norm=0.007422):
-        """
-            Springel-Hernquist+03 functional form for the cosmic SFR.
-            Default are given the values of Vangioni+15.
-            Returns an event rate in units of yr-1 Mpc-3
-            Note : nu is in units of Msun/yr/Mpc3 and IMF_norm in units of Msun-1
-        """
-        return IMF_norm * nu * a * np.exp(b*(z-zm)) / ((a-b) + b*np.exp(a*(z-zm)))
-
-    def BExp(z, a=1.1, b=-0.57, zm=1.9, SFR_norm=0.02744, IMF_norm=0.007422):
-        """
-            GRB rate as parametrized by a broken exponential function.
-            Default values are chosen as best fit from SFR of Vangioni+15
-            If you leave the default SFR_norm and IMF_norm, the result
-            will be in units of yr-1 Mpc-3.
-            IMF_norm is in units of M_sun-1 and converts the CSFRD (in
-            units of M_sun yr-1 Mpc-3) to a core-collapse rate density (in
-            units of yr-1 Mpc-3).
-            SFR_norm is adjusted on the functional form of Springel-Hernquist
-            (SH) with the parameter values of Vangioni+15.
-        """
-        if isinstance(z, np.ndarray):
-            w = np.where(z > zm)[0]
-            rate = np.exp(a*z)
-            rate[w] = np.exp(b*z[w]) * np.exp((a-b)*zm)
-        else:
-            if z <= zm:
-                rate = np.exp(a*z)
-            else:
-                rate = np.exp(b*z) * np.exp((a-b)*zm)
-        return SFR_norm*IMF_norm*rate
-
-    def create_mock_constraint(self, obs_constraints=None):
+    def create_mock_constraints(self, obs_constraints=None):
         """
             Create the mock constraints from the current population.
             obs_constraints is a dictionary with the necessary
@@ -549,7 +549,7 @@ class GRBPopulation:
                                            'quantity':quantity,
                                            'bins':bins,
                                            'hist_unnormed':mod,
-                                           'err':np.sqrt(mod)}
+                                           'err_unnormed':np.sqrt(mod)}
         return
 
     def compare_to_observational_constraints(self, obs_constraints, method='chi2'):
@@ -563,11 +563,13 @@ class GRBPopulation:
         for name, constraint in obs_constraints.items():
             # Normalize to observations
             model = self.mock_constraints[name]['hist_unnormed']
-            norm = obs.normalize_to_constraint(mod=model,
-                                               obs=constraint['hist'],
-                                               err=constraint['err'])
+            error = self.mock_constraints[name]['err_unnormed']
+            norm = self._normalize_to_constraint(mod=model,
+                                                 obs=constraint['hist'],
+                                                 err=constraint['err'])
             self.mock_constraints[name]['norm'] = norm
             self.mock_constraints[name]['hist'] = norm * model
+            self.mock_constraints[name]['err'] = norm * error
             # Calculate likelihood
             if method == 'chi2':
                 chi2 = st.chi2(mod=self.mock_constraints[name]['hist'],
@@ -593,18 +595,35 @@ class GRBPopulation:
 
         return
 
-    def save_all_GRBs(self, output_dir):
+    def normalize_GRB_population(self):
         """
-            Save all GRBs to a data frame format openable with pandas.
-            This file might be big depending on the number of GRBs.
+            Normalize the population using the Stern constraints.
+            This yields T_sim the duration of the simulation
         """
-        df = pd.DataFrame(self.properties)
-        outfile = output_dir/"GRB_Properties"
-        df.to_msgpack(outfile)
+        if 'Stern' not in self.mock_constraints.keys():
+            raise KeyError("You must first create_mock_constraints for Stern before trying to"
+                           " normalize an LGRB population")
+        N_BATSE = np.sum(self.mock_constraints['Stern']['hist_unnormed'])
+        T_sim = N_BATSE / R_tot_BATSE
+        T_sim_err = T_sim * R_tot_BATSE_err/R_tot_BATSE
+        R_intr = self.Nb_GRBs/T_sim  # LGRB/yr in 4 pi above Lmin
+        R_intr_err = R_intr * T_sim_err/T_sim
+        self.normalization['T_sim'] = T_sim
+        self.normalization['T_sim_err'] = T_sim_err
+        self.normalization['R_intr'] = R_intr
+        self.normalization['R_intr_err'] = R_intr_err
 
-        log.info(f"Saved all GRB properties in {outfile}")
-
+        # Second method: chi2 minimisation
+        T_sim_from_chi2 = T_live_BATSE/self.mock_constraints['Stern']['norm']
+        self.normalization['T_sim_from_chi2'] = T_sim_from_chi2
         return
+
+    def _normalize_to_constraint(self, mod, obs, err):
+        """
+            Estimate the best normalization factor using chi2 minimization.
+        """
+        norm = np.sum(obs*mod/err**2) / np.sum((mod/err)**2)
+        return norm
 
     def save_fig(self, fig, filename):
         try:
@@ -632,6 +651,7 @@ class GRBPopulation:
         summary = "\n" + full_width * thick_line + "\n"
         summary += sides + "SUMMARY".center(center_width) + sides + "\n"
         summary += full_width * thick_line + "\n"
+
         # General configuration
         _Nb_GRBs_string = f"Nb_GRBs =".rjust(half_width)
         _Nb_GRBs = f" {self.Nb_GRBs:.2e}".ljust(half_width)
@@ -640,6 +660,20 @@ class GRBPopulation:
         summary += sides + _Nb_GRBs_string + _Nb_GRBs + sides + "\n"
         summary += sides + _output_dir_string + _output_dir + sides + "\n"
         summary += full_width * thick_line + "\n"
+
+        # Parameters
+        summary += sides + "Parameters".center(center_width) + sides + "\n"
+        summary += full_width * thick_line + "\n"
+        for distr_name, params in self.parameters.items():
+            summary += sides + distr_name.center(center_width) + sides + "\n"
+            summary += full_width * thin_line + "\n"
+            for param, value in params.items():
+                _key = f"{param} =".rjust(half_width)
+                _val = f" {value}".ljust(half_width)
+                _summary = sides + _key + _val + sides + "\n"
+                summary += _summary
+            summary += full_width * thin_line + "\n"
+
         # Properties
         summary += sides + "Properties".center(center_width) + sides + "\n"
         summary += full_width * thick_line + "\n"
@@ -661,13 +695,23 @@ class GRBPopulation:
                                  f"{_max:< .4e}".center(cell_width)])
             summary += _summary.ljust(full_width) + "\n"
 
+        # Likelihood
         summary += full_width * thick_line + "\n"
         summary += sides + "Likelihood".center(center_width) + sides + "\n"
         summary += full_width * thick_line + "\n"
-        # Likelihood
         for key, val in sorted(self.likelihood_params.items()):
             _key = f"{key} =".rjust(half_width)
-            _val = f" {val:.5f}".ljust(half_width+1)
+            _val = f" {val:.3f}".ljust(half_width)
+            _summary = sides + _key + _val + sides + "\n"
+            summary += _summary
+
+        # Normalization
+        summary += full_width * thick_line + "\n"
+        summary += sides + "Normalization".center(center_width) + sides + "\n"
+        summary += full_width * thick_line + "\n"
+        for key, val in sorted(self.normalization.items()):
+            _key = f"{key} =".rjust(half_width)
+            _val = f" {val:.3f}".ljust(half_width)
             _summary = sides + _key + _val + sides + "\n"
             summary += _summary
 

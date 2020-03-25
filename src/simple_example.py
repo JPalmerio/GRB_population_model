@@ -1,7 +1,6 @@
 from ECLAIRs import init_ECLAIRs
 from cosmology import init_cosmology
-from GRB_pop import GRBPopulation
-import physics as ph
+from GRB_population import GRBPopulation
 import io_grb_pop as io
 import miscellaneous as msc
 import numpy as np
@@ -42,9 +41,9 @@ np.random.seed(0)
 GRB_pop = GRBPopulation(Nb_GRBs=int(float(config['Nb_GRBs'])),
                         output_dir=paths_to_dir['output'])
 GRB_pop.draw_GRB_properties(cosmo=cosmo, params=params, run_mode='debug', savefig=True)
-ph.calc_peak_photon_flux(GRB_prop=GRB_pop.properties, incl_instruments=incl_instruments)
-ph.calc_det_prob(GRB_prop=GRB_pop.properties, incl_samples=incl_samples)
-GRB_pop.create_mock_constraint(obs_constraints=incl_constraints)
+GRB_pop.calc_peak_photon_flux(incl_instruments=incl_instruments)
+GRB_pop.calc_det_prob(incl_samples=incl_samples)
+GRB_pop.create_mock_constraints(obs_constraints=incl_constraints)
 GRB_pop.compare_to_observational_constraints(obs_constraints=incl_constraints, method='chi2')
 
 log.info(GRB_pop.summary())

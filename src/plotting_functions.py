@@ -6,7 +6,6 @@ import matplotlib.pyplot as plt
 from matplotlib import gridspec
 from matplotlib.colors import Normalize
 from matplotlib.lines import Line2D
-import observational_constraints as obs
 import miscellaneous as msc
 import stats as st
 import io_grb_pop as io
@@ -56,7 +55,7 @@ def plottable_hist(x_in, y_in, last_bin_edge):
     return x_out, y_out
 
 
-def xerr_from_bins(bins, log=False):
+def xerr_from_bins(bins, logscale=False):
     """
         Convenience function to easily calculate the x_err from bins to
         represent a histogram as crosses on a plot
@@ -65,7 +64,7 @@ def xerr_from_bins(bins, log=False):
         - x_errp the extent of the bin from x up to the right bin edge
         - x_errm the extent of the bin from x down to the left bin edge
     """
-    if log:
+    if logscale:
         x = np.sqrt(bins[1:] * bins[:-1])
     else:
         x = 0.5 * (bins[1:] + bins[:-1])
@@ -76,26 +75,169 @@ def xerr_from_bins(bins, log=False):
     return x, x_errp, x_errm
 
 
-def plot_EpGBM(fname=None, log=True, density=False, ax=None, **kwargs):
+def plot_intensity_constraint(ax, pop=None, plot_obs=True, **kwargs):
     """
-        Convenience function to plot the EpGBM constraint on a given ax
+        Plot the intensity constraint from Stern et al. 2001
     """
-    if fname is None:
-        fname = root_dir/'observational_constraints/EpGBM.txt'
-    if ax is None:
-        ax = plt.gca()
-    bins, obs_lin, err_lin = obs.create_EpGBM_hist(fname, density=density, bins_log=log)
 
-    x, x_errp, x_errm = xerr_from_bins(bins, log=log)
+    if pop is not None:
+        # Turn normal hist into logN-logP
+        bins = pop.mock_constraints['Stern']['bins']
+        err = pop.mock_constraints['Stern']['err_unnormed']
+        hist = pop.mock_constraints['Stern']['hist_unnormed']
+        delta_bin = np.log10(bins[1:]/bins[:-1])
+        hist = hist / (pop.normalization['T_sim']*delta_bin)
+        err = err / (pop.normalization['T_sim']*delta_bin)
+        y_mod, y_mod_errp, y_mod_errm = msc.lin_to_log(hist, err)
 
-    ax.errorbar(x, obs_lin, xerr=[x_errm, x_errp], yerr=err_lin, **kwargs)
+        # Make it look better for plots
+        x_plottable, y_mod_plottable = plottable_hist(bins[:-1], y_mod, last_bin_edge=bins[-1])
+        y_mod_errm_plottable = double_array(y_mod_errm)
+        y_mod_errp_plottable = double_array(y_mod_errp)
 
+        # Plot them
+        art, = ax.plot(x_plottable, y_mod_plottable, **kwargs)
+        ax.fill_between(x_plottable,
+                        y_mod_plottable+y_mod_errp_plottable,
+                        y_mod_plottable-y_mod_errm_plottable,
+                        alpha=0.6, color=plt.getp(art,'color'), zorder=plt.getp(art,'zorder'))
+    if plot_obs:
+        bins_Stern, obs_log, err_log = io.read_logRlogN()
+        x, x_errp, x_errm = xerr_from_bins(bins_Stern, logscale=True)
+        ax.errorbar(x, obs_log, xerr=[x_errm, x_errp], yerr=err_log, color='k', fmt='none')
+
+    ax.set_xscale('log')
+    ax.set_xlabel(r'$N^{\rm pk}_{50-300\,\rm keV}~\rm{[ph\,cm^{-2}\,s^{-1}]}$')
+    ax.set_ylabel(r'log $\Delta R/\Delta \,(\log\,N^{\rm pk})$')
+    return
+
+
+def plot_spectral_constraint(ax, pop=None, plot_obs=True, **kwargs):
+
+    if plot_obs:
+        bins_Ep = np.linspace(0,4.5, 30)
+        bins, obs_lin, err_lin = io.read_constraint(name='EpGBM', density=True, bins_log=True, last_bin_edge=1e4)
+        x, x_errp, x_errm = xerr_from_bins(bins, logscale=True)
+        ax.errorbar(x, obs_lin, xerr=[x_errm, x_errp], yerr=err_lin, color='k', fmt='none')
+        plot_obs_property('../catalogs/GBM_cat/fermi_GBM_cat_total.dat',
+                          key='pflx_band_epeak',
+                          func=[msc.filter_df, msc.filter_df],
+                          func_args=[{'filtering_key':'t90', 'lim_min':2, 'errors':'coerce'},
+                                     {'filtering_key':'pflx_band_phtfluxb', 'lim_min':0.9, 'errors':'coerce'}],
+                          log=True, verbose=True, kde=True,
+                          bins=bins_Ep,
+                          ax=ax, density=True, label='Spectral Constraint', alpha=0.8,
+                          color='lightgray', errors='coerce')
+        ax.get_legend().remove()
+    if pop is not None:
+        # Read the mock constraint from the population
+        bins = pop.mock_constraints['EpGBM']['bins']
+        err = pop.mock_constraints['EpGBM']['err_unnormed']
+        hist = pop.mock_constraints['EpGBM']['hist_unnormed']
+        # Turn into density
+        bins_log = np.log10(bins)
+        delta_bin = bins_log[1:]-bins_log[:-1]
+        N_tot = np.sum(hist)
+        hist = hist / (N_tot*delta_bin)
+        err = err / (N_tot*delta_bin)
+
+        # Make it look better for plots
+        x_plottable, y_mod_plottable = plottable_hist(bins_log[:-1], hist, last_bin_edge=bins_log[-1])
+        y_mod_err_plottable = double_array(err)
+
+        # Plot them
+        art, = ax.plot(x_plottable, y_mod_plottable, **kwargs)
+        ax.fill_between(x_plottable,
+                        y_mod_plottable+y_mod_err_plottable,
+                        y_mod_plottable-y_mod_err_plottable,
+                        alpha=0.6, color=plt.getp(art,'color'), zorder=plt.getp(art,'zorder'))
+    ax.set_xlabel(r'log Peak Energy $\rm{[keV]}$')
+    ax.set_ylabel(r'Number density')
+
+    return
+
+
+def plot_redshift_constraint(ax, pop=None, plot_obs=True, **kwargs):
+
+    if plot_obs:
+        bins_eBAT6, obs_lin, err_lin = io.read_constraint(name='eBAT6', density=True, last_bin_edge=6)
+        x, x_errp, x_errm = xerr_from_bins(bins_eBAT6)
+        plot_obs_property('../catalogs/BAT6_cat/eBAT6_cat.txt', header=3,
+                          key='redshift',
+                          log=False, verbose=True, kde=True,
+                          bins=bins_eBAT6,
+                          ax=ax, density=True, label=None, alpha=0.8,
+                          color='lightgray', errors='coerce')
+        ax.errorbar(x, obs_lin, xerr=[x_errm, x_errp], yerr=err_lin, color='k', fmt='none')
+        ax.get_legend().remove()
+
+    if pop is not None:
+        # Read the mock constraint from the population
+        bins = pop.mock_constraints['eBAT6']['bins']
+        err = pop.mock_constraints['eBAT6']['err_unnormed']
+        hist = pop.mock_constraints['eBAT6']['hist_unnormed']
+        # Turn into density
+        delta_bin = bins[1:]-bins[:-1]
+        N_tot = np.sum(hist)
+        hist = hist / (N_tot*delta_bin)
+        err = err / (N_tot*delta_bin)
+
+        # Make it look better for plots
+        x_plottable, y_mod_plottable = plottable_hist(bins[:-1], hist, last_bin_edge=bins[-1])
+        y_mod_err_plottable = double_array(err)
+
+        # Plot them
+        art, = ax.plot(x_plottable, y_mod_plottable, **kwargs)
+        ax.fill_between(x_plottable,
+                        y_mod_plottable+y_mod_err_plottable,
+                        y_mod_plottable-y_mod_err_plottable,
+                        alpha=0.6, color=plt.getp(art,'color'), zorder=plt.getp(art,'zorder'))
+    ax.set_ylim(0)
+    ax.set_xlim(0,6)
+    ax.set_xlabel('Redshift(z)')
+    ax.set_ylabel(r'Number density')
+    return
+
+
+def plot_SHOALS_z_distr_with_bounds(ax):
+    """
+        Plot the observed SHOALS cumulative redshift distribution
+        while calculating the bounds at the 95% confidence on a given ax
+    """
+    fname = root_dir/'catalogs/SHOALS_cat/SHOALS_cat.txt'
+    z_SHOALS = io.read_data(fname, 2, err=False)
+    mask = np.isfinite(z_SHOALS[0])
+    z_SHOALS = msc.mask_ndarray(z_SHOALS, mask)
+    plot_ndarray_cdf_lim_only(ax, z_SHOALS, arrow_size=0.015)
+    st.compute_CDF_bounds_by_MC(sample=z_SHOALS[0],
+                                sample_errp=z_SHOALS[1],
+                                sample_errm=z_SHOALS[2],
+                                sample_ll=z_SHOALS[4],
+                                sample_ul=z_SHOALS[3],
+                                ul_min_val=np.zeros(len(z_SHOALS[3])),
+                                confidence=95.0,
+                                positive=True,
+                                precision=1000,
+                                N_MC=10000,
+                                bootstrap=True,
+                                verbose=True,
+                                show_plot=True,
+                                ax=ax,
+                                color='k',
+                                show_median=True, zorder=0, label='SHOALS observed', linewidth=2)
+    ax.set_xlabel('Redshift (z)')
+    ax.set_xlim(0,8)
+    ax.set_ylim(0,1)
+    ax.legend(loc='center right')
     return
 
 
 def plot_SHOALS_distr(df_mod, key, SHOALS_file=None, cumul=False, ax=None, plot_obs=True,
     mod_color='C0', mod_label='Model', bins=None, log=False, **kwargs):
-
+    """
+        A general function to plot one of two possible distributions for the SHOALS sample:
+        Redshift distribution (key='z') or Fluence distribution (key='S_BAT')
+    """
     if ax is None:
         fig, ax = plt.subplots(figsize=(10,8))
 
@@ -130,54 +272,37 @@ def plot_SHOALS_distr(df_mod, key, SHOALS_file=None, cumul=False, ax=None, plot_
     return
 
 
-def plot_constraint(constraint, bins, mod, obs, err, plot_mod=True, plot_obs=True, log=True, ax=None):
+def plot_constraint(constraint, mod=None, plot_mod=True, plot_obs=True, ax=None):
     """
         Convenience function to quickly plot the various constraints
         used in the population model
-        The histograms are doubled for plotting (easier...)
     """
     if constraint not in ['Stern', 'EpGBM', 'eBAT6']:
         raise ValueError("constraint must be one of {}".format(['Stern', 'EpGBM', 'eBAT6']))
 
-    x, x_errp, x_errm = xerr_from_bins(bins, log=log)
-
     if ax is None:
         fig, ax = plt.subplots()
 
-    if plot_mod:
-        x1, mod_to_plot = plottable_hist(bins[:-1], mod, last_bin_edge=bins[-1])
-        ax.plot(x1, mod_to_plot, drawstyle='steps-post', label='Model', lw=2)
-
-    if plot_obs:
-        x1, obs_to_plot = plottable_hist(bins[:-1], obs, last_bin_edge=bins[-1])
-        ax.errorbar(x, obs, xerr=[x_errm, x_errp], yerr=err,
-                    capsize=0, label='Observations', fmt='.', color='k')
+    if not plot_mod:
+        mod = None
 
     if constraint == 'Stern':
-        ax.set_yscale('log')
-        ax.set_xscale('log')
-        ax.set_xlabel(r'Peak flux $\rm{[ph\,cm^{-2}\,s^{-1}\,50-300\,keV]}$')
-        ax.set_ylabel(r'$\Delta N/\Delta \,(\rm{log\,}P)\,\rm{[yr^{-1}] }$ in $4\pi$')
+        plot_intensity_constraint(ax, pop=mod, plot_obs=plot_obs)
     elif constraint == 'EpGBM':
-        ax.set_xlabel(r'Peak Energy $\rm{[keV]}$')
-        ax.set_ylabel(r'Number of GRBs')
-        ax.set_xlim([13.,10000.])
-        ax.set_ylim([0.,350.])
-        ax.set_xscale('log')
+        plot_spectral_constraint(ax, pop=mod, plot_obs=plot_obs)
     elif constraint == 'eBAT6':
-        ax.set_xlabel('Redshift(z)')
-        ax.set_ylabel(r'Number of GRBs')
-        ax.set_xlim([0.01, 6.])
+        plot_redshift_constraint(ax, pop=mod, plot_obs=plot_obs)
+
     ax.legend()
     return
 
 
 def scatter_incomplete_ndarray(ax, x, y, colormap=None, x_is_log=False, y_is_log=False,
-                               xlimsize=None, ylimsize=None, capsize=0.0, errorcolor='k',
-                               errlw=1.2, z_order=5, alpha_errorbar=0.8, edgecolor='k', linewidth=0.8, **kwargs):
+    xlimsize=None, ylimsize=None, capsize=0.0, errorcolor='k', errlw=1.2, z_order=5,
+    alpha_errorbar=0.8, edgecolor='k', linewidth=0.8, **kwargs):
     """
     Helper function to easily plot two variables with incomplete data sets (uses masks) and errors, or limits.
-    Assumes the data is in the form of the output of read_column (ndarray).
+    Assumes the data is in the form of the output of read_data (ndarray).
     i.e. : x[0] = data (float)
            x[1] = error plus (float)
            x[2] = error minus (float)
@@ -259,7 +384,7 @@ def scatter_incomplete_ndarray(ax, x, y, colormap=None, x_is_log=False, y_is_log
     return scatterplot
 
 
-def fig_marg(figsize=(7, 6), cb=True, **kwargs):
+def fig_marg(figsize=(10, 8), cb=True, **kwargs):
     fig = plt.figure(figsize=figsize, **kwargs)
 
     if cb:
@@ -286,7 +411,8 @@ def fig_marg(figsize=(7, 6), cb=True, **kwargs):
     return fig, axes
 
 
-def cool_hist2d(x, y, c=None, mode='scatter', xlabel=None, ylabel=None, cb=True, cblabel=None, fig=None, figsize=(9, 7),
+def cool_hist2d(x, y, c=None, mode='scatter', xlabel=None, ylabel=None, cb=True, cblabel=None,
+    fig=None, figsize=(10, 8),
                 plot_left_kdeplot=True, plot_top_kdeplot=True,
                 plot_left_hist=True, plot_top_hist=True,
                 left_kdeplot_kwargs={'color': 'k', 'label': 'KDE'},
@@ -467,6 +593,93 @@ def plot_eBAT6_EpL(fname=None, axes=None, fname_lim=None, mini_cax=False, kde=Fa
     return
 
 
+def plot_eBAT6_EpL_for_pub(fname=None, axes=None, fname_lim=None, mini_cax=False, kde=False, show_relation=True):
+    if fname is None:
+        fname = root_dir/'catalogs/BAT6_cat/eBAT6_cat.txt'
+    if fname_lim is None:
+        fname_lim = root_dir/'resources/BAT6_detection_limit_EpL_plane.txt'
+
+    if axes is None:
+        fig, axes = fig_marg(figsize=(10, 8), cb=True)
+    else:
+        fig = plt.gcf()
+
+    if mini_cax:
+        m_cax = fig.add_axes([0.780, 0.125, 0.015, 0.20])
+        axes['mini_cb'] = m_cax
+        fsize = 12
+    else:
+        axes['mini_cb'] = axes['cb']
+        fsize = 25
+
+    # Retrieve observational data
+    Ep_obs = io.read_data(fname, 13, stripper='|', splitter='|', single_err=True)
+    L_obs = io.read_data(fname, 15, stripper='|', splitter='|', single_err=True)
+    z_obs = io.read_data(fname, 1, stripper='|', splitter='|', err=False)
+    L_obs[0:3] = L_obs[0:3] * 10**51
+    Ep_obs = msc.lin_to_log_ndarray(Ep_obs)
+    L_obs = msc.lin_to_log_ndarray(L_obs)
+
+    # Plot them
+    art = scatter_incomplete_ndarray(axes['center'], L_obs, Ep_obs, colormap=[z_obs[0],0.,6.,'YlOrRd'],
+                                     marker='o', s=100, edgecolor='k', linewidth=0.8, label='eBAT6 observed data')
+    mask = np.isfinite(L_obs[0]) & np.isfinite(Ep_obs[0])
+    Ep_obs_masked = msc.mask_ndarray(Ep_obs, mask)
+    L_obs_masked = msc.mask_ndarray(L_obs, mask)
+    if kde:
+        sns.kdeplot(L_obs_masked[0], Ep_obs_masked[0], ax=axes['center'], n_levels=5,
+                    shade=True, shade_lowest=False, cmap='Greys', alpha=0.8)
+    cb2 = fig.colorbar(art, cax=axes['mini_cb'])
+    cb2.set_label('Redshift (z)', **{'size':fsize})
+    cb2.ax.tick_params(labelsize=20)
+    cb2.ax.tick_params(which='minor', right=False)
+
+    # Detection limit of BAT6
+    Ep_lim = io.read_column(fname_lim, 0, splitter='\t')
+    z_lim = np.asarray([0.3, 2., 5.])
+    L_lim = np.zeros((len(z_lim), len(Ep_lim)))
+    ls = ['--', '-.',':']
+    for i in range(len(z_lim)):
+        L_lim[i] = io.read_column(fname_lim, i+1, splitter='\t')
+        axes['center'].plot(np.log10(L_lim[i]), np.log10(Ep_lim), ls=ls[i], c='k', lw=2)
+
+    # Relation of Pescalli+16
+    if show_relation:
+        logL_Pesc = np.linspace(49, 55)
+        logEp_Pesc = -25.6 + 0.54*logL_Pesc
+        sigma_Pesc = 0.28 * np.sqrt(1.+0.54**2)  # to adjust for perpendicular scatter
+        # Ep0 = 309. keV, alpha_amati = 0.54, sigma = 0.28
+        art, = axes['center'].plot(logL_Pesc, logEp_Pesc, lw=2.5, color='C0')
+        color_Pesc = plt.getp(art,'color')
+        axes['center'].plot(logL_Pesc, logEp_Pesc+sigma_Pesc, ls='--', lw=1.5, color=color_Pesc)
+        axes['center'].plot(logL_Pesc, logEp_Pesc-sigma_Pesc, ls='--', lw=1.5, color=color_Pesc)
+
+    # Left histogram
+    bins_Ep = np.linspace(1,4,31)
+    axes['left'].hist(Ep_obs_masked[0], bins=bins_Ep, orientation='horizontal', label='eBAT6 observed',
+                      edgecolor='k', linewidth=0.5, density=True, color='lightgray', alpha=0.8)
+    sns.kdeplot(Ep_obs_masked[0], ax=axes['left'], vertical=True, color='k', linewidth=2)
+    axes['left'].invert_xaxis()
+    axes['left'].autoscale(True, axis='x')
+    # Top histogram
+    bins_L = np.linspace(49,55,31)
+    axes['top'].hist(L_obs_masked[0], bins=bins_L, label='eBAT6 observed',
+                     edgecolor='k',linewidth=0.5, density=True, color='lightgray', alpha=0.8)
+    sns.kdeplot(L_obs_masked[0], ax=axes['top'], label='KDE', color='k', linewidth=2)
+    axes['top'].get_legend().remove()
+    axes['top'].autoscale(True, axis='y')
+
+    # Axes formatting
+    axes['left'].set_ylabel(r'log Peak Energy $\rm{[keV]}$')
+    axes['center'].set_xlabel(r'log Luminosity $\rm{[erg/s]}$')
+    axes['center'].set_xlim(49.3,54.8)
+    axes['center'].set_ylim(1.3, 3.7)
+    axes['center'].tick_params(labelsize=23)
+    axes['left'].tick_params(labelsize=23)
+
+    return
+
+
 def plot_CDF_with_bounds(bins_mid, median, lower, upper, ax, **kwargs):
     """
         Convenience function to elegantly plot a cumulative distribution
@@ -498,8 +711,8 @@ def plot_CDF_with_bounds(bins_mid, median, lower, upper, ax, **kwargs):
 
 
 def plot_CDFs_and_KS_results(bins, med1, med2, lw1, lw2, up1, up2, D_stat, p_value, confidence,
-                             pfrac=None, label1=None, label2=None, color1=None, color2=None):
-    fig = plt.figure(figsize=(10,8),tight_layout=True)
+    pfrac=None, label1=None, label2=None, color1=None, color2=None):
+    fig = plt.figure(figsize=(10,8), tight_layout=True)
     gs = gridspec.GridSpec(2, 2, height_ratios=[2, 1], width_ratios=[1,1])
     ax = fig.add_subplot(gs[0,:])
     axD = fig.add_subplot(gs[1,0])

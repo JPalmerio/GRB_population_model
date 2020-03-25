@@ -91,6 +91,143 @@ def read_init_files(paths_to_files):
     return config, params, instruments, samples, obs_constraints
 
 
+def create_config(config, samples, instruments, obs_constraints):
+    """
+        Filter the samples, instruments, and observation constraint
+        dictionaries to return only the ones included in the config.
+        The samples, instruments and obs_constraints inputs represent
+        all possible choices, and the specific ones to be used are
+        specified by the user in the config file.
+    """
+    incl_samples = included_samples(config['samples'], samples)
+    incl_instruments = included_instruments(incl_samples, instruments)
+    incl_constraints = included_constraints(config['constraints'], obs_constraints)
+    incl_constraints = load_observational_constraints(incl_constraints)
+    return incl_samples, incl_instruments, incl_constraints
+
+
+def included_samples(config_samples, samples):
+    """
+        Create the list of the sample names which will be used by the
+        code.
+    """
+    try:
+        incl_samples = {sample_name: samples[sample_name] for sample_name in config_samples}
+    except KeyError as e:
+        raise ValueError(f"Sample {e} does not exist. Possible samples are {list(samples.keys())}")
+
+    log.info(f"Including samples: {list(incl_samples.keys())}")
+    log.debug("Including samples:\n" + str(yaml.dump(incl_samples, indent=4)))
+
+    return incl_samples
+
+
+def included_constraints(config_constr, constraints):
+    """
+        Create the list of the instruments which will be needed by the
+        code, given the samples required by the user.
+    """
+    try:
+        incl_constraints = {constr_name: constraints[constr_name] for constr_name in config_constr}
+    except KeyError as e:
+        raise ValueError(f"Constraint {e} does not exist."
+                         f"Possible choices are {list(constraints.keys())}")
+
+    log.info(f"Including constraints: {list(incl_constraints.keys())}")
+    log.debug("Including constraints:\n" + str(yaml.dump(incl_constraints, indent=4)))
+
+    return incl_constraints
+
+
+def included_instruments(incl_samples, instruments):
+    """
+        Create the list of the instruments which will be needed by the
+        code, given the samples required by the user.
+    """
+    incl_instruments = {incl_samples[s]['instrument']: instruments[incl_samples[s]['instrument']]
+                        for s in incl_samples}
+
+    log.info(f"Including instruments: {list(incl_instruments.keys())}")
+    log.debug("Including instruments:\n" + str(yaml.dump(incl_instruments, indent=4)))
+
+    return incl_instruments
+
+
+def load_observational_constraints(obs_constraints):
+    """
+        Read the observational data once and for all and store them in
+        a dictionary to be used by the fitting procedure.
+    """
+
+    for name, constraint in obs_constraints.items():
+        bins, hist, err = read_constraint(name, last_bin_edge=constraint['last_bin'])
+        constraint['bins'] = bins
+        constraint['hist'] = hist
+        constraint['err'] = err
+    return obs_constraints
+
+
+def read_constraint(name, last_bin_edge, bins_log=False, density=False, verbose=False):
+    """
+        A convenience function to read the observational constraint from
+        a file. Assumes the format of the file is:
+        1. left bin edge 2. histogram of counts 3. error
+        You must provide a last bin edge as well.
+    """
+
+    valid_names = ['Stern', 'EpGBM', 'eBAT6', 'Kommers']
+
+    if name not in valid_names:
+        raise ValueError('Constraint name must be one of {}'.format(valid_names))
+
+    fname = root_dir/f'observational_constraints/{name}.txt'
+
+    bins = read_column(fname, 0, array=False)
+    hist = read_column(fname, 1)
+    err = read_column(fname, 2)
+    bins.append(last_bin_edge)  # append right edge of last bin
+    bins = np.array(bins)
+
+    if bins_log:
+        bins = np.log10(bins)
+
+    if density:
+        N_EpGBM = hist.sum()
+        delta_bin = bins[1:]-bins[:-1]
+        hist /= (N_EpGBM * delta_bin)
+        err /= (N_EpGBM * delta_bin)
+
+    if verbose:
+        ln_oi = 0.
+        for i, val in enumerate(hist):
+            ln_oi += val*np.log(val) - val
+        print(f"ln(o_i!) = {ln_oi} from EpGBM histogram")
+    return bins, hist, err
+
+
+def read_logRlogN(fname=None):
+    """
+        Create the histogram from [Stern et al. 2001]
+        (https://ui.adsabs.harvard.edu/abs/2001ApJ...563...80S/abstract)
+        Fig. 23 rebinned to avoid low counts
+        This histogram is log( Rate/delta(log pflx) ) in units of
+        [GRBs/yr/log pflx in 4 pi] (i.e. corrected for solid angle and
+        live time of the search):
+        <Omega_BATSE> = 0.7 * 4pi
+        T_live_BATSE = 6.25 yr (T_tot_BATSE = 9.1 yr) see Goldstein 2013
+    """
+    if fname is None:
+        fname = root_dir/'resources/Stern_logRlogN.txt'
+
+    bins = read_column(fname, 0, array=False)
+    hist = read_column(fname, 1)
+    err = read_column(fname, 2)
+    bins.append(50.0)  # append right edge of last bin
+    bins = np.array(bins)
+
+    return bins, hist, err
+
+
 def create_output_dir(paths_to_dir, dir_name, overwrite=False):
     """
         Create the output directory where the results from the code will

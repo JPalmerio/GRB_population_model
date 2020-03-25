@@ -3,8 +3,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import yaml
 
-filename = '../Model_outputs/190329_test_ab/GRB_Properties'
-filename_old = '../Model_outputs/190329_test_ab_old/GRB_Properties'
+filename = '../model_outputs/190329_test_ab/GRB_Properties'
+filename_old = '../model_outputs/190329_test_ab_old/GRB_Properties'
 with open('../init/samples.yml', 'r') as f:
     samples = yaml.safe_load(f)
 
