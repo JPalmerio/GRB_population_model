@@ -291,7 +291,7 @@ def Erg_flux_ECLAIRs(L, z, Ep, D_L, alpha, beta, ktild, Emin, Emax, eff_area_A_t
     return Erg_flux_ECLAIRs
 
 
-def calc_peak_photon_flux(GRB_prop, incl_instruments, ECLAIRs_prop=None, f90=True):
+def calc_peak_photon_flux(GRB_prop, instruments, ECLAIRs_prop=None, f90=True):
     """
         Calculates peak photon flux in units of ph/cm2/s (assumed to be
         over a 1s time interval)
@@ -299,7 +299,7 @@ def calc_peak_photon_flux(GRB_prop, incl_instruments, ECLAIRs_prop=None, f90=Tru
 
     log.info(f"Starting calculations of peak photon fluxes...")
 
-    for name, properties in incl_instruments.items():
+    for name, properties in instruments.items():
         Emin = properties['Emin']
         Emax = properties['Emax']
         log.debug(f"For {name} instrument [{Emin}, {Emax} keV]:")
@@ -322,7 +322,7 @@ def calc_peak_photon_flux(GRB_prop, incl_instruments, ECLAIRs_prop=None, f90=Tru
     return
 
 
-def calc_peak_energy_flux(GRB_prop, incl_instruments, ECLAIRs_prop=None, f90=True):
+def calc_peak_energy_flux(GRB_prop, instruments, ECLAIRs_prop=None, f90=True):
     """
         Calculates peak energy flux in units of erg/cm2/s (assumed to be
         over a 1s time interval)
@@ -330,7 +330,7 @@ def calc_peak_energy_flux(GRB_prop, incl_instruments, ECLAIRs_prop=None, f90=Tru
 
     log.info(f"Starting calculations of peak energy fluxes...")
 
-    for name, properties in incl_instruments.items():
+    for name, properties in instruments.items():
         Emin = properties['Emin']
         Emax = properties['Emax']
         log.debug(f"For {name} instrument [{Emin}, {Emax} keV]:")
@@ -353,7 +353,7 @@ def calc_peak_energy_flux(GRB_prop, incl_instruments, ECLAIRs_prop=None, f90=Tru
     return
 
 
-def calc_photon_fluence(GRB_prop, incl_instruments):
+def calc_photon_fluence(GRB_prop, instruments):
     """
         Calculate the photon fluence in units of ph/cm2 over the T90 of
         the burst.
@@ -361,7 +361,7 @@ def calc_photon_fluence(GRB_prop, incl_instruments):
 
     log.debug("Starting calculations of photon fluences...")
     t1 = time.time()
-    for name in incl_instruments:
+    for name in instruments:
         if name == 'ECLAIRs':
             GRB_prop['_'.join(['pht_flnc', name])] = GRB_prop['t90obs']*GRB_prop['Cvar'] * GRB_prop['_'.join(['pht_cts', name])]
         else:
@@ -372,7 +372,7 @@ def calc_photon_fluence(GRB_prop, incl_instruments):
     return
 
 
-def calc_energy_fluence(GRB_prop, incl_instruments):
+def calc_energy_fluence(GRB_prop, instruments):
     """
         Calculate the energy fluence in units of erg/cm2 over the T90 of
         the burst.
@@ -380,7 +380,7 @@ def calc_energy_fluence(GRB_prop, incl_instruments):
 
     log.debug(f"Starting calculations of energy fluences...")
     t1 = time.time()
-    for name in incl_instruments:
+    for name in instruments:
         if name == 'ECLAIRs':
             try:
                 GRB_prop['_'.join(['erg_flnc', name])] = GRB_prop['t90obs']*GRB_prop['Cvar'] * GRB_prop['_'.join(['erg_cts', name])]
@@ -454,7 +454,7 @@ def calc_det_prob_SVOM(cts, offax_corr, omega_ECLAIRs, omega_ECLAIRs_tot, t90obs
     return det_prob_tot, det_prob_cts, det_prob_flnc
 
 
-def calc_det_prob(GRB_prop, incl_samples, **ECLAIRs_prop):
+def calc_det_prob(GRB_prop, samples, **ECLAIRs_prop):
     """
         Calculate the detection probability of the GRBs for each sample,
         given the peak flux.
@@ -465,7 +465,7 @@ def calc_det_prob(GRB_prop, incl_samples, **ECLAIRs_prop):
     log.info("Starting calculations of detection probability...")
     Nb_GRBs = len(GRB_prop['z'])
 
-    for name, properties in incl_samples.items():
+    for name, properties in samples.items():
         instr_name = properties['instrument']
 
         log.debug(f"{name} sample:")

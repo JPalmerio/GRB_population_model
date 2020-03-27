@@ -10,72 +10,10 @@ import miscellaneous as msc
 import stats as st
 import io_grb_pop as io
 from io_grb_pop import root_dir
-
-try:
-    plt.style.use('presentation')
-except Exception:
-    pass
+from constants import T_live_BATSE
 
 
-def double_array(array_in):
-    """
-        Convenience function to duplicate the consecutive rows in an
-        array to make it easy to plot.
-    """
-    array_out = np.zeros(2*len(array_in))
-    for i in range(len(array_in)):
-        array_out[2*i] = array_in[i]
-        array_out[2*i+1] = array_in[i]
-    return array_out
-
-
-def plottable_hist(x_in, y_in, last_bin_edge):
-    """
-        Convenience function to create a plottable pair of x,y arrays
-        - x is the left edge of the bins so last_bin_edge must be
-        provided
-        - y[i] is the histogram value between x[i] and x[i+1]
-        The output can be easily plotted.
-        Example:
-        x = [0,1,2]; last_bin_edge = 3
-        y = [2,4,3]
-        ----> x_out = [0,1,1,2,2,3] y_out = [2,2,4,4,3,3]
-    """
-    if len(x_in) != len(y_in):
-        print("[ERROR] in plottable_hist: x and y have different lenths : {} and {}".format(len(x_in), len(y_in)))
-        raise IOError
-
-    x_out = double_array(x_in)
-    y_out = double_array(y_in)
-
-    x_out[1:-1] = x_out[2:]
-    x_out[0] = x_in[0]
-    x_out[-1] = last_bin_edge
-
-    return x_out, y_out
-
-
-def xerr_from_bins(bins, logscale=False):
-    """
-        Convenience function to easily calculate the x_err from bins to
-        represent a histogram as crosses on a plot
-        returns:
-        - x the middle point of the bin in the x direction
-        - x_errp the extent of the bin from x up to the right bin edge
-        - x_errm the extent of the bin from x down to the left bin edge
-    """
-    if logscale:
-        x = np.sqrt(bins[1:] * bins[:-1])
-    else:
-        x = 0.5 * (bins[1:] + bins[:-1])
-
-    x_errp = bins[1:] - x
-    x_errm = x - bins[:-1]
-
-    return x, x_errp, x_errm
-
-
-def plot_intensity_constraint(ax, pop=None, plot_obs=True, **kwargs):
+def plot_intensity_constraint(ax, pop=None, plot_obs=True, alt_norm=False, **kwargs):
     """
         Plot the intensity constraint from Stern et al. 2001
     """
@@ -83,11 +21,18 @@ def plot_intensity_constraint(ax, pop=None, plot_obs=True, **kwargs):
     if pop is not None:
         # Turn normal hist into logN-logP
         bins = pop.mock_constraints['Stern']['bins']
-        err = pop.mock_constraints['Stern']['err_unnormed']
-        hist = pop.mock_constraints['Stern']['hist_unnormed']
         delta_bin = np.log10(bins[1:]/bins[:-1])
-        hist = hist / (pop.normalization['T_sim']*delta_bin)
-        err = err / (pop.normalization['T_sim']*delta_bin)
+        if alt_norm:
+            err = pop.mock_constraints['Stern']['err']
+            hist = pop.mock_constraints['Stern']['hist']
+            hist = hist / (T_live_BATSE*delta_bin)
+            err = err / (T_live_BATSE*delta_bin)
+        else:
+            err = pop.mock_constraints['Stern']['err_unnormed']
+            hist = pop.mock_constraints['Stern']['hist_unnormed']
+            hist = hist / (pop.normalization['T_sim']*delta_bin)
+            err = err / (pop.normalization['T_sim']*delta_bin)
+
         y_mod, y_mod_errp, y_mod_errm = msc.lin_to_log(hist, err)
 
         # Make it look better for plots
@@ -232,7 +177,7 @@ def plot_SHOALS_z_distr_with_bounds(ax):
     return
 
 
-def plot_SHOALS_distr(df_mod, key, SHOALS_file=None, cumul=False, ax=None, plot_obs=True,
+def plot_SHOALS_distr(pop, key, SHOALS_file=None, cumul=False, ax=None, plot_obs=True,
     mod_color='C0', mod_label='Model', bins=None, log=False, **kwargs):
     """
         A general function to plot one of two possible distributions for the SHOALS sample:
@@ -241,20 +186,28 @@ def plot_SHOALS_distr(df_mod, key, SHOALS_file=None, cumul=False, ax=None, plot_
     if ax is None:
         fig, ax = plt.subplots(figsize=(10,8))
 
+    if key == 'z':
+        key_mod = 'z'
+    elif key == 'S_BAT':
+        key_mod = 'pht_flnc_BAT'
+    else:
+        raise ValueError
     df_obs = io.read_SHOALS_file(SHOALS_file)
     data_obs = df_obs[key].to_numpy()
-    df_mod = df_mod.to_numpy()
+
+    cond = pop.properties['pdet_SHOALS'] == 1
+    mod = pop.properties[cond][key_mod].to_numpy()
 
     if log:
         data_obs = np.log10(data_obs)
-        df_mod = np.log10(df_mod)
+        mod = np.log10(mod)
 
     if cumul:
         if plot_obs:
             x_obs, cdf_obs = st.unbinned_empirical_cdf(data_obs)
             ax.plot(x_obs, cdf_obs, color='C5', drawstyle='steps-post', label='SHOALS observed', lw=3)
 
-        x_mod, cdf_mod = st.unbinned_empirical_cdf(df_mod)
+        x_mod, cdf_mod = st.unbinned_empirical_cdf(mod)
         ax.plot(x_mod, cdf_mod, color=mod_color, drawstyle='steps-post', label=mod_label, **kwargs)
 
         ax.legend()
@@ -265,10 +218,32 @@ def plot_SHOALS_distr(df_mod, key, SHOALS_file=None, cumul=False, ax=None, plot_
             sns.kdeplot(df_obs[key], ax=ax, label='SHOALS observed', color='C5')
             ax.hist(df_obs[key], color='C5', bins=bins, density=True, alpha=0.7)
 
-        sns.kdeplot(df_mod, ax=ax, label='Model', color=mod_color)
-        ax.hist(df_mod, color=mod_color, bins=bins, density=True, alpha=0.7, **kwargs)
+        sns.kdeplot(mod, ax=ax, label='Model', color=mod_color)
+        ax.hist(mod, color=mod_color, bins=bins, density=True, alpha=0.7, **kwargs)
 
         ax.set_ylabel('PDF')
+    return
+
+
+def plot_Pescalli_2016_GRB_rate(ax, nGRB0=1.3e-9, **kwargs):
+    """
+        Plot the redshift distribution of LGRBs derived by Pescalli+16
+        (https://ui.adsabs.harvard.edu/abs/2016A%26A...587A..40P/abstract)
+        DOI : 10.1051/0004-6361/201526760
+        The distribution is normalized to its maximum, to convert it to
+        physical units use nGRB0 (default value is adjusted to redshift
+        distribution of Wanderman & Piran 2010 at z=0).
+    """
+    filename = root_dir/'catalogs/BAT6_cat/BAT6ext_GRB_formation_rate.txt'
+
+    z = io.read_column(filename, 0) - 1.  # because the original is as 1+z
+    distr = io.read_column(filename, 1)
+    distr_err = io.read_column(filename, 2)
+    norm = nGRB0/distr[0] * 1.6
+    # the additional factor comes from the fact that the first value is not
+    # exactly as z=0, so we need to correct for that
+    ax.errorbar(z, norm*distr, yerr=norm*distr_err, **kwargs)
+    ax.fill_between(z, norm*(distr+distr_err), norm*(distr-distr_err), alpha=0.3, color=kwargs['color'])
     return
 
 
@@ -385,6 +360,11 @@ def scatter_incomplete_ndarray(ax, x, y, colormap=None, x_is_log=False, y_is_log
 
 
 def fig_marg(figsize=(10, 8), cb=True, **kwargs):
+    """
+        Create a figure with marginal plots on the top and the left.
+        Optional: cb stands for colorbar
+    """
+
     fig = plt.figure(figsize=figsize, **kwargs)
 
     if cb:
@@ -411,24 +391,23 @@ def fig_marg(figsize=(10, 8), cb=True, **kwargs):
     return fig, axes
 
 
-def cool_hist2d(x, y, c=None, mode='scatter', xlabel=None, ylabel=None, cb=True, cblabel=None,
-    fig=None, figsize=(10, 8),
-                plot_left_kdeplot=True, plot_top_kdeplot=True,
-                plot_left_hist=True, plot_top_hist=True,
-                left_kdeplot_kwargs={'color': 'k', 'label': 'KDE'},
-                top_kdeplot_kwargs={'color': 'k', 'label': 'KDE'},
-                left_hist_kwargs={'label': None,
-                                  'bins': 20,
-                                  'color': 'lightgrey',
-                                  'edgecolor':'k'},
-                top_hist_kwargs={'label': None,
-                                 'bins': 20,
-                                 'color': 'lightgrey',
-                                 'edgecolor':'k'},
-                cbar_kwargs={},
-                hist2d_kwargs={},
-                kde2d_kwargs={},
-                **kwargs):
+def cool_hist2d(x, y, c=None, mode='scatter', cb=True, fig=None, figsize=(10, 8),
+    xlabel=None, ylabel=None, cblabel=None,
+    plot_left_kdeplot=True, plot_top_kdeplot=True, plot_left_hist=True, plot_top_hist=True,
+    left_kdeplot_kwargs={'color': 'k', 'label': 'KDE'},
+    top_kdeplot_kwargs={'color': 'k', 'label': 'KDE'},
+    left_hist_kwargs={'label': None, 'bins': 20, 'color': 'lightgrey', 'edgecolor':'k'},
+    top_hist_kwargs={'label': None, 'bins': 20, 'color': 'lightgrey', 'edgecolor':'k'},
+    cbar_kwargs={}, hist2d_kwargs={}, kde2d_kwargs={}, **kwargs):
+    """
+        Convenience function to plot a 2D x y plane.
+        There are 3 values possible for 'mode':
+            - scatter: scatter plot
+            - hist2d: a 2D histogram of the data
+            - kde2D: a 2D Gaussian Kernel Density Estimation of the data
+        c is an optional argument which can be used to color the points
+        in the plane with a third property in the 'scatter' mode.
+    """
     if fig is None:
         fig, axes = fig_marg(figsize=figsize, cb=cb)
     else:
@@ -836,3 +815,60 @@ def plot_ndarray_cdf_lim_only(ax, ndarr, x_is_log=False, arrow_size=None, color=
 
     return
 
+
+def double_array(array_in):
+    """
+        Convenience function to duplicate the consecutive rows in an
+        array to make it easy to plot.
+    """
+    array_out = np.zeros(2*len(array_in))
+    for i in range(len(array_in)):
+        array_out[2*i] = array_in[i]
+        array_out[2*i+1] = array_in[i]
+    return array_out
+
+
+def plottable_hist(x_in, y_in, last_bin_edge):
+    """
+        Convenience function to create a plottable pair of x,y arrays
+        - x is the left edge of the bins so last_bin_edge must be
+        provided
+        - y[i] is the histogram value between x[i] and x[i+1]
+        The output can be easily plotted.
+        Example:
+        x = [0,1,2]; last_bin_edge = 3
+        y = [2,4,3]
+        ----> x_out = [0,1,1,2,2,3] y_out = [2,2,4,4,3,3]
+    """
+    if len(x_in) != len(y_in):
+        print("[ERROR] in plottable_hist: x and y have different lenths : {} and {}".format(len(x_in), len(y_in)))
+        raise IOError
+
+    x_out = double_array(x_in)
+    y_out = double_array(y_in)
+
+    x_out[1:-1] = x_out[2:]
+    x_out[0] = x_in[0]
+    x_out[-1] = last_bin_edge
+
+    return x_out, y_out
+
+
+def xerr_from_bins(bins, logscale=False):
+    """
+        Convenience function to easily calculate the x_err from bins to
+        represent a histogram as crosses on a plot
+        returns:
+        - x the middle point of the bin in the x direction
+        - x_errp the extent of the bin from x up to the right bin edge
+        - x_errm the extent of the bin from x down to the left bin edge
+    """
+    if logscale:
+        x = np.sqrt(bins[1:] * bins[:-1])
+    else:
+        x = 0.5 * (bins[1:] + bins[:-1])
+
+    x_errp = bins[1:] - x
+    x_errm = x - bins[:-1]
+
+    return x, x_errp, x_errm

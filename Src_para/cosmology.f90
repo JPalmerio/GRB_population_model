@@ -15,10 +15,10 @@ MODULE Cosmology
   INTEGER                          :: i                                 ! Loop indice
   CHARACTER(*), PARAMETER          :: Format_IC1 ='(A,A25,A20,A)'       ! Format for InitCosmology output on screen
   CHARACTER(*), PARAMETER          :: Format_IC2 ='(A,A45,A20,A)'       ! Format for InitCosmology output on screen
-  CHARACTER(*), PARAMETER          :: precisezfile = "Tabprecisez.dat"  ! Name of precise z file
-  CHARACTER(*), PARAMETER          :: D_Lfile      = "TabD_L.dat"       ! Name of D_L file
-  CHARACTER(*), PARAMETER          :: dVdzfile     = "TabdVdz.dat"      ! Name of dVdz file
-  CHARACTER(*), PARAMETER          :: Vzfile       = "TabVz.dat"        ! Name of Vz file      
+  CHARACTER(*), PARAMETER          :: precisezfile = "../data/cosmology/Tabprecisez.dat"  ! Name of precise z file
+  CHARACTER(*), PARAMETER          :: D_Lfile      = "../data/cosmology/TabD_L.dat"       ! Name of D_L file
+  CHARACTER(*), PARAMETER          :: dVdzfile     = "../data/cosmology/TabdVdz.dat"      ! Name of dVdz file
+  CHARACTER(*), PARAMETER          :: Vzfile       = "../data/cosmology/TabVz.dat"        ! Name of Vz file      
   LOGICAL                          :: D_Lexist                          ! Does the D_L file exist ? yes = .TRUE.
   LOGICAL                          :: precisezexist                     ! Does the precise z file exist ?
   LOGICAL                          :: dVdzexist                         ! Does the dVdz file exist ?

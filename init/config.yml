@@ -8,9 +8,3 @@ samples: ['Stern', 'EpGBM', 'eBAT6', 'Swift', 'ECLAIRs', 'SHOALS', 'GBM_sample',
 
 # Constraints can by anything you define in the obs_constraints.yml file
 constraints: ['Stern', 'EpGBM', 'eBAT6']
-
-# Saves all GRBs to a file, careful this file can be big
-save_all_GRBs: False
-
-likelihood:
-  epsilon: 1.0E-3

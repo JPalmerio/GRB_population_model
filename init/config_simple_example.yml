@@ -8,8 +8,5 @@ samples: ['Stern', 'EpGBM', 'eBAT6']
 
 constraints: ['Stern', 'EpGBM', 'eBAT6']
 
-# Saves all GRBs to a file, careful this file can be big
-save_all_GRBs: False
-
 likelihood:
   epsilon: 1.0E-3

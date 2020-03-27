@@ -47,36 +47,75 @@ def BExp(z, a=1.1, b=-0.57, zm=1.9, SFR_norm=0.02744, IMF_norm=0.007422):
     return SFR_norm*IMF_norm*rate
 
 
-def BPL_z(z, a=2.07, b=-1.36, zm=3.11, norm=1.3e-9):
+def BPL_z(z, a=2.07, b=-1.36, zm=3.11, nGRB0=1.3e-9, eta0=1, av_jet_ang=1):
     """
-        Returns the unnormalized broken power law function
-        Expects Lum arguments to be in log scale
+        Returns the LGRB comoving event rate
         The default values are from Wanderman & Piran 2010
-        The norm is given by them as well, converted to units of
-        yr-1 Mpc-3 (carefull this is the LGRB rate not the core-
-        collapse rate, you need to multiply by the efficiency and
-        the average opening angle.)
+        The norm is given by them as well:
+        converted to units of yr-1 Mpc-3 (carefull this is the LGRB rate
+        not the core-collapse rate, you need to multiply by the
+        efficiency eta0 and the average opening angle.)
     """
-    rate = np.where(z <= zm, (1.+z)**a, (1.+z)**b * (1.+zm)**(a-b))
-    return norm*rate
+    shape = np.where(z <= zm, (1.+z)**a, (1.+z)**b * (1.+zm)**(a-b))
+    return eta0*av_jet_ang*nGRB0*shape
 
 
-def MD(z, gamma_0=0.0204, gamma_1=1.8069, gamma_2=3.1724, gamma_3=7.2690):
+def P16(z, gamma_0=1.3e-9, gamma_1=1.8069, gamma_2=3.1724, gamma_3=7.2690):
     """
         Fit of the GRB rate from Pescalli et al. 2016 based on the
-        Star Formation Rate Density from Madau & Dickinson 2014.
-        Normalized to its maximum (arbitrary units)
+        functional form for the Star Formation Rate Density from
+        Madau & Dickinson 2014.
+        gamma_0 is obtained by normalizing the value of this form to the
+        one of WP10 at z=0.
+        Returns an LGRB comoving event rate density in units of
+        [yr-1 Mpc-3]
     """
-    return gamma_0 * (1.+z)**gamma_1 / (1. + ((1.+z)/gamma_2)**gamma_3)
+    shape = (1.+z)**gamma_1 / (1. + ((1.+z)/gamma_2)**gamma_3)
+    return gamma_0*shape
 
 
-def D06(z, a, b, c, d, IMF_norm=0.007422):
+def qD06(z, SFR, mod='A', IMF_norm=0.0122):
     """
-        SFR of Daigne+06
+        LGRB rate of Daigne+06.
+        Returns an LGRB comoving event rate density in units of
+        [yr-1 Mpc-3]
         Default values for [SFR1, SFR2, SFR3] are:
         a = [0.320, 0.196, 0.175]
         b = [3.30, 4.0, 3.67]
         c = [3.52, 4.0, 3.58]
         d = [23.6, 14.6, 12.6]
+        k = [3e-6, 2.5e-6, 8e-7]
     """
-    return IMF_norm * a*np.exp(b*z) / (d + np.exp(c*z))
+    a_s = [0.320, 0.196, 0.175]
+    b_s = [3.30, 4.0, 3.67]
+    c_s = [3.52, 4.0, 3.58]
+    d_s = [23.6, 14.6, 12.6]
+    if mod == 'LN':
+        k_s = [2.5e-6, 2e-6, 6.3e-7]
+    elif mod == 'A':
+        k_s = [4e-6, 3.2e-6, 1e-6]
+    else:
+        raise ValueError('mod must be A or LN')
+
+    if SFR not in [1,2,3]:
+        raise ValueError('SFR must be an int equal to 1, 2, or 3.')
+
+    shape = a_s[SFR-1]*np.exp(b_s[SFR-1]*z) / (d_s[SFR-1] + np.exp(c_s[SFR-1]*z))
+    return IMF_norm * k_s[SFR-1] * shape
+
+
+def D06(z, a, b, c, d, IMF_norm=0.0122):
+    """
+        Core-collapse rate of Daigne+06.
+        Returns an core-collapse comoving event rate density in units of
+        [yr-1 Mpc-3]
+        Default values for [SFR1, SFR2, SFR3] are:
+        a = [0.320, 0.196, 0.175]
+        b = [3.30, 4.0, 3.67]
+        c = [3.52, 4.0, 3.58]
+        d = [23.6, 14.6, 12.6]
+        k = [3e-6, 2.5e-6, 8e-7]
+    """
+
+    shape = a*np.exp(b*z) / (d + np.exp(c*z))
+    return IMF_norm * shape

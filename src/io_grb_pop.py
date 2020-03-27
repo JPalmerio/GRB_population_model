@@ -1,6 +1,7 @@
 import logging
 import yaml
 import datetime
+import pickle
 import numpy as np
 import pandas as pd
 from pathlib import Path
@@ -10,7 +11,17 @@ log = logging.getLogger(__name__)
 root_dir = Path(__file__).resolve().parents[1]
 
 
-def generate_paths(init_dir=None):
+def load_GRBPopulation_from(fname):
+    """
+        Load a population from a pickle file
+    """
+    with open(fname, 'rb') as f:
+        GRB_pop = pickle.load(f)
+    log.debug(GRB_pop.summary())
+    return GRB_pop
+
+
+def generate_paths(conf_fname=None, param_fname=None, init_dir=None):
     """
         Generate the various paths for the necessary input and output
         files.
@@ -26,8 +37,15 @@ def generate_paths(init_dir=None):
         init_dir = root_dir/'init'
 
     # Input files
-    config_file = init_dir/'config.yml'
-    param_file = init_dir/'parameters.yml'
+    if conf_fname is None:
+        config_file = init_dir/'config.yml'
+    else:
+        config_file = init_dir/conf_fname
+    if param_fname is None:
+        param_file = init_dir/'parameters.yml'
+    else:
+        param_file = init_dir/param_fname
+
     instrum_file = init_dir/'instruments.yml'
     sample_file = init_dir/'samples.yml'
     obs_constraints_file = init_dir/'obs_constraints.yml'

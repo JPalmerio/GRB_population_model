@@ -1,5 +1,9 @@
 import numpy as np
+import yaml
 from constants import cLight
+import logging
+
+log = logging.getLogger(__name__)
 
 
 def init_cosmology(cosmo_dir):
@@ -13,7 +17,11 @@ def init_cosmology(cosmo_dir):
     for quant, name in zip(cosmo_quantities, quant_names):
         with open(cosmo_dir/f'Tab{quant}.dat', 'rb') as f:
             cosmo[name] = np.fromfile(f, dtype=np.dtype("i4,100001f8,i4"), count=-1)[0][1]
-
+    with open(cosmo_dir/'parameters.yml', 'r') as f:
+        cosmo_params = yaml.safe_load(f)
+    cosmo.update(cosmo_params)
+    log.debug(f"Read cosmology from directory {cosmo_dir}: "
+              f"{list(cosmo['parameters'].values())}")
     return cosmo
 
 
@@ -23,7 +31,7 @@ def create_cosmology(OmegaM=0.27, OmegaL=0.73, h=0.71, zmax=20, z_step=0.001, ve
         step is the interval of the redshift array.
     """
     if verbose:
-        print("Creating cosmology with: OmegaM = {}, OmegaL = {}, H0 = {}".format(OmegaM, OmegaL, 100.*h))
+        log.info("Creating cosmology with: OmegaM = {}, OmegaL = {}, H0 = {}".format(OmegaM, OmegaL, 100.*h))
     cosmo = {}
     z = np.arange(0, zmax, z_step)
     N = len(z)
@@ -35,9 +43,7 @@ def create_cosmology(OmegaM=0.27, OmegaL=0.73, h=0.71, zmax=20, z_step=0.001, ve
             * (1./E(z[i], OmegaM=OmegaM, OmegaL=OmegaL) + 1./E(z[i-1], OmegaM=OmegaM, OmegaL=OmegaL))
 
     # Differential comoving volume element
-    dVdz = np.zeros(N)
-    for i in range(1,N):
-        dVdz[i] = 4.*np.pi * cdivH0 * D_L[i]**2/(1.+z[i])**2 * 1./E(z[i], OmegaM=OmegaM, OmegaL=OmegaL)
+    dVdz = 4.*np.pi*cdivH0 * D_L**2/(1.+z)**2 / E(z, OmegaM=OmegaM, OmegaL=OmegaL)
 
     # Volume of the Universe at redshift z
     Vz = np.zeros(N)
@@ -48,6 +54,9 @@ def create_cosmology(OmegaM=0.27, OmegaL=0.73, h=0.71, zmax=20, z_step=0.001, ve
     cosmo['D_L'] = D_L
     cosmo['dVdz'] = dVdz
     cosmo['Vz'] = Vz
+    cosmo['parameters'] = {'OmegaM':OmegaM,
+                           'OmegaL':OmegaL,
+                           'h':h}
     return cosmo
 
 

@@ -4,23 +4,41 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import logging
 import yaml
+import pickle
 from pathlib import Path
+import scipy.integrate as integrate
 # GRB population specific imports
+import stats as st
+import physics as ph
+import functional_forms as ff
+import f90_functions as f90f
 from io_grb_pop import root_dir, load_observational_constraints
 from cosmology import init_cosmology, Lum_dist
 from constants import R_tot_BATSE, R_tot_BATSE_err, T_live_BATSE
-import functional_forms as ff
-import physics as ph
-import stats as st
 
 log = logging.getLogger(__name__)
 
-try:
-    import f90_functions as f90f
-    f90 = True
-except ImportError:
-    f90 = False
-    log.error("Could not import f90_functions, f90 set to False")
+
+def create_GRB_population_from(Nb_GRBs, cosmo, params, incl_instruments, incl_samples, incl_constraints,
+    ECLAIRs_prop=None, output_dir=None, nGRB0=None, nGRB0_err=None, run_mode=None, savefig=False):
+    """
+        A convenienve function to quickly create a GRB population given
+        a set of cosmology, parameters, instruments, samples,
+        constraints and a number of GRBs to draw.
+    """
+
+    GRB_pop = GRBPopulation(Nb_GRBs=Nb_GRBs,
+                            output_dir=output_dir)
+    GRB_pop.draw_GRB_properties(cosmo=cosmo, params=params, run_mode=run_mode, savefig=savefig)
+    GRB_pop.calculate_quantities(instruments=incl_instruments, samples=incl_samples, ECLAIRs_prop=ECLAIRs_prop)
+    GRB_pop.create_mock_constraints(constraints=incl_constraints)
+    GRB_pop.compare_to_observational_constraints(constraints=incl_constraints)
+    if nGRB0 is None:
+        GRB_pop.normalize_to_Stern()
+    else:
+        GRB_pop.normalize_from(nGRB0)
+    print(GRB_pop.summary())
+    return GRB_pop
 
 
 class GRBPopulation:
@@ -29,6 +47,8 @@ class GRBPopulation:
         if Nb_GRBs is None and properties is None:
             raise ValueError("You must either specify Nb_GRBs or properties to instanciate this class.")
         elif Nb_GRBs is not None and properties is None:
+            if isinstance(Nb_GRBs, str):
+                Nb_GRBs = int(float(Nb_GRBs))
             if not isinstance(Nb_GRBs, int):
                 raise TypeError
             self.Nb_GRBs = Nb_GRBs
@@ -45,6 +65,8 @@ class GRBPopulation:
         if output_dir is None:
             self.output_dir = Path().cwd()
         else:
+            if not isinstance(output_dir, Path):
+                output_dir = Path(output_dir)
             self.output_dir = output_dir
 
     def draw_L(self, Nb_GRBs=None, model='EPL', z=None, run_mode=None, savefig=False, **params):
@@ -139,8 +161,6 @@ class GRBPopulation:
             Draw z from a redshift distribution
         """
 
-        self.parameters['redshift_distribution'] = {'model':model, **params}
-
         if Nb_GRBs is None:
             Nb_GRBs = self.Nb_GRBs
 
@@ -149,6 +169,9 @@ class GRBPopulation:
                 cosmo = init_cosmology(Path().cwd().parent/'data'/'cosmology')
             except FileNotFoundError:
                 raise ValueError("Could not draw z because no cosmology provided")
+
+        self.parameters['cosmology'] = {**cosmo['parameters']}
+        self.parameters['redshift_distribution'] = {'model':model, **params}
 
         redshift = cosmo['redshift']
         dVdz = cosmo['dVdz']
@@ -166,11 +189,15 @@ class GRBPopulation:
             z_pdf_comov = ff.BPL_z(z_range, a=params['a'], b=params['b'], zm=params['zm'])
         elif model == 'D06':
             z_pdf_comov = ff.D06(z_range, a=params['a'], b=params['b'], c=params['c'], d=params['d'])
+        elif model == 'qD06':
+            z_pdf_comov = ff.qD06(z_range, SFR=params['SFR'])
         elif model == 'P16':
-            z_pdf_comov = ff.MD(z_range, gamma_0=0.0204, gamma_1=1.8069, gamma_2=3.1724, gamma_3=7.2690)
+            z_pdf_comov = ff.P16(z_range, gamma_0=0.0204, gamma_1=1.8069, gamma_2=3.1724, gamma_3=7.2690)
         else:
             raise NotImplementedError
 
+        pseudo_collapse_rate = integrate.trapz(z_pdf_comov/z_pdf_comov[0] * comoving_volume, z_range)
+        self.normalization['pseudo_collapse_rate'] = pseudo_collapse_rate
         z_pdf_unnormed = z_pdf_comov * comoving_volume
         z_pdf = z_pdf_unnormed / z_pdf_unnormed.sum()
 
@@ -417,7 +444,7 @@ class GRBPopulation:
         # The median redshift of the population of GBM_bright is needed
         # to calculate t90 (which is defined as pht_pflx in BATSE band
         # above 0.9 ph/s/cm2)
-        self.calc_peak_photon_flux(incl_instruments={'BATSE':{'Emin':50,'Emax':300}})
+        self.calc_peak_photon_flux(instruments={'BATSE':{'Emin':50,'Emax':300}})
         GBM_bright_selection = self.properties['pht_pflx_BATSE'] >= 0.9
         z_med = np.median(self.properties[GBM_bright_selection]['z'])
         self.draw_t90(**params['t90obs_distribution'], z_med=z_med, run_mode=run_mode, savefig=savefig)
@@ -425,13 +452,9 @@ class GRBPopulation:
 
         self.properties['Eiso'] = self.properties['L'] * self.properties['Cvar'] * self.properties['t90']
 
-        if run_mode == 'debug':
-            summary = self.summary()
-            print(summary)
-
         return self.properties
 
-    def draw_GRB_properties_for_MCMC(self, cosmo, params, incl_instruments):
+    def draw_GRB_properties_for_MCMC(self, cosmo, params, instruments):
         """
             Draw only the core properties necessary to run the MCMC
             exploration. This method is optimized for speed so not all
@@ -443,16 +466,34 @@ class GRBPopulation:
         self.draw_Ep(**params['peak_energy_distribution'])
         self.draw_spec(**params['spectral_shape'])
 
-        Epobs = self.properties['Ep']/(1. + self.properties['z'])
-        self.properties['Epobs'] = Epobs
+        self.properties['Epobs'] = self.properties['Ep']/(1. + self.properties['z'])
         # Use the function from physics module to avoid unecessary
         # checks present in the class method
         ph.calc_peak_photon_flux(GRB_prop=self.properties,
-                                 incl_instruments=incl_instruments)
+                                 instruments=instruments)
 
         return self.properties
 
-    def calc_peak_photon_flux(self, incl_instruments, ECLAIRs_prop=None):
+    def calculate_quantities(self, instruments, samples, ECLAIRs_prop=None):
+        """
+            Convenience function to calculate:
+            - peak photon flux
+            - peak energy flux
+            - photon fluence
+            - energy fluence
+            And then the detection probability for the included samples
+        """
+        self.calc_peak_photon_flux(instruments, ECLAIRs_prop=ECLAIRs_prop)
+        self.calc_peak_energy_flux(instruments, ECLAIRs_prop=ECLAIRs_prop)
+        self.calc_photon_fluence(instruments)
+        self.calc_energy_fluence(instruments)
+        if ECLAIRs_prop is not None:
+            self.calc_det_prob(samples, **ECLAIRs_prop)
+        else:
+            self.calc_det_prob(samples)
+        return
+
+    def calc_peak_photon_flux(self, instruments, ECLAIRs_prop=None):
         """
             Calculate the peak photon flux for every GRB in the
             population.
@@ -462,16 +503,16 @@ class GRBPopulation:
         # This is to avoid recalculation BATSE pflx if it's already
         # been calculated for the t90 drawings
         if 'pht_pflx_BATSE' in self.properties.columns:
-            _incl_instruments = incl_instruments.copy()
-            _incl_instruments.pop('BATSE')
+            _instruments = instruments.copy()
+            _instruments.pop('BATSE')
         else:
-            _incl_instruments = incl_instruments
+            _instruments = instruments
         ph.calc_peak_photon_flux(GRB_prop=self.properties,
-                                 incl_instruments=_incl_instruments,
+                                 instruments=_instruments,
                                  ECLAIRs_prop=ECLAIRs_prop)
         return
 
-    def calc_peak_energy_flux(self, incl_instruments, ECLAIRs_prop=None):
+    def calc_peak_energy_flux(self, instruments, ECLAIRs_prop=None):
         """
             Calculate the peak energy flux for every GRB in the
             population.
@@ -479,11 +520,11 @@ class GRBPopulation:
         necessary_prop = ['L', 'z', 'Ep', 'alpha', 'beta', 'D_L']
         self._check_properties(necessary_prop, func_name='peak energy flux')
         ph.calc_peak_energy_flux(GRB_prop=self.properties,
-                                 incl_instruments=incl_instruments,
+                                 instruments=instruments,
                                  ECLAIRs_prop=ECLAIRs_prop)
         return
 
-    def calc_photon_fluence(self, incl_instruments):
+    def calc_photon_fluence(self, instruments):
         """
             Calculate the photon fluence in units of ph/cm2 over the T90
             of the burst.
@@ -491,10 +532,10 @@ class GRBPopulation:
         necessary_prop = ['t90obs', 'Cvar']
         self._check_properties(necessary_prop, func_name='photon fluence')
         ph.calc_photon_fluence(GRB_prop=self.properties,
-                               incl_instruments=incl_instruments)
+                               instruments=instruments)
         return
 
-    def calc_energy_fluence(self, incl_instruments):
+    def calc_energy_fluence(self, instruments):
         """
             Calculate the photon fluence in units of ph/cm2 over the T90
             of the burst.
@@ -502,16 +543,16 @@ class GRBPopulation:
         necessary_prop = ['t90obs', 'Cvar']
         self._check_properties(necessary_prop, func_name='energy fluence')
         ph.calc_energy_fluence(GRB_prop=self.properties,
-                               incl_instruments=incl_instruments)
+                               instruments=instruments)
         return
 
-    def calc_det_prob(self, incl_samples, **ECLAIRs_prop):
+    def calc_det_prob(self, samples, **ECLAIRs_prop):
         """
             Calculates the detection probability for the included
             samples
         """
         ph.calc_det_prob(GRB_prop=self.properties,
-                         incl_samples=incl_samples, **ECLAIRs_prop)
+                         samples=samples, **ECLAIRs_prop)
         return
 
     def _check_properties(self, necessary_prop, func_name):
@@ -525,19 +566,19 @@ class GRBPopulation:
                 raise KeyError(f"Property {prop} must exist before you attempt to calculate the"
                                f" {func_name}.")
 
-    def create_mock_constraints(self, obs_constraints=None):
+    def create_mock_constraints(self, constraints=None):
         """
             Create the mock constraints from the current population.
             obs_constraints is a dictionary with the necessary
             information about each constraint.
         """
 
-        if obs_constraints is None:
+        if constraints is None:
             with open(root_dir/'init/obs_constraints.yml', 'r') as f:
-                obs_constraints = yaml.safe_load(f)
-            load_observational_constraints(obs_constraints)
+                constraints = yaml.safe_load(f)
+            load_observational_constraints(constraints)
 
-        for name, constraint in obs_constraints.items():
+        for name, constraint in constraints.items():
             bins = constraint['bins']
             val_min = constraint['val_min']
             prop_min = constraint['prop_min']
@@ -552,7 +593,7 @@ class GRBPopulation:
                                            'err_unnormed':np.sqrt(mod)}
         return
 
-    def compare_to_observational_constraints(self, obs_constraints, method='chi2'):
+    def compare_to_observational_constraints(self, constraints, method='chi2'):
         """
             First normalize the population to the observational
             constraints then calculate the likelihood of the current
@@ -560,7 +601,7 @@ class GRBPopulation:
         """
         lnL_tot = 0.0
         chi2_tot = 0.0
-        for name, constraint in obs_constraints.items():
+        for name, constraint in constraints.items():
             # Normalize to observations
             model = self.mock_constraints[name]['hist_unnormed']
             error = self.mock_constraints[name]['err_unnormed']
@@ -595,7 +636,29 @@ class GRBPopulation:
 
         return
 
-    def normalize_GRB_population(self):
+    def normalize_from(self, nGRB0, nGRB0_err=None):
+        """
+            Normalize the population to a given local LGRB comoving
+            event rate nGRB0 [yr-1 Mpc-3]
+        """
+        R_intr = nGRB0 * self.normalization['pseudo_collapse_rate']
+        T_sim = self.Nb_GRBs/R_intr
+        if nGRB0_err is not None:
+            R_intr_err = R_intr * nGRB0_err/nGRB0
+            T_sim_err = T_sim * R_intr_err/R_intr
+        else:
+            R_intr_err = np.nan
+            T_sim_err = np.nan
+
+        self.normalization['nGRB0'] = nGRB0
+        self.normalization['nGRB0_err'] = nGRB0_err
+        self.normalization['R_intr'] = R_intr
+        self.normalization['R_intr_err'] = R_intr_err
+        self.normalization['T_sim'] = T_sim
+        self.normalization['T_sim_err'] = T_sim_err
+        return
+
+    def normalize_to_Stern(self):
         """
             Normalize the population using the Stern constraints.
             This yields T_sim the duration of the simulation
@@ -604,18 +667,32 @@ class GRBPopulation:
             raise KeyError("You must first create_mock_constraints for Stern before trying to"
                            " normalize an LGRB population")
         N_BATSE = np.sum(self.mock_constraints['Stern']['hist_unnormed'])
+        # Simulation duration
         T_sim = N_BATSE / R_tot_BATSE
         T_sim_err = T_sim * R_tot_BATSE_err/R_tot_BATSE
+        # Intrinsic Rate
         R_intr = self.Nb_GRBs/T_sim  # LGRB/yr in 4 pi above Lmin
         R_intr_err = R_intr * T_sim_err/T_sim
+        # Local LGRB comoving rate density
+        nGRB0 = R_intr / self.normalization['pseudo_collapse_rate']
+        nGRB0_err = nGRB0 * R_intr_err/R_intr
+
         self.normalization['T_sim'] = T_sim
         self.normalization['T_sim_err'] = T_sim_err
         self.normalization['R_intr'] = R_intr
         self.normalization['R_intr_err'] = R_intr_err
+        self.normalization['nGRB0'] = nGRB0
+        self.normalization['nGRB0_err'] = nGRB0_err
 
         # Second method: chi2 minimisation
-        T_sim_from_chi2 = T_live_BATSE/self.mock_constraints['Stern']['norm']
-        self.normalization['T_sim_from_chi2'] = T_sim_from_chi2
+        if 'norm' not in self.mock_constraints['Stern'].keys():
+            log.warning('Could not calculate T_sim_from_chi2 since no normalization'
+                        ' was found for Stern')
+        else:
+            norm = self.mock_constraints['Stern']['norm']
+            T_sim_from_chi2 = T_live_BATSE/norm
+            self.normalization['T_sim_from_chi2'] = T_sim_from_chi2
+
         return
 
     def _normalize_to_constraint(self, mod, obs, err):
@@ -624,6 +701,34 @@ class GRBPopulation:
         """
         norm = np.sum(obs*mod/err**2) / np.sum((mod/err)**2)
         return norm
+
+    def save_to(self, fname=None, save_memory=True):
+        """
+            Save the population to a pickle file.
+            You can set save_memory to True to save memory storage; in
+            this case the drawings for each LGRB and the associated
+            quantities wont be saved.
+        """
+        if fname is None:
+            fname = self.output_dir/'GRB_population'
+        elif fname is not None and not isinstance(fname, Path):
+            fname = Path(fname)
+
+        if not fname.parent.exists():
+            fname.parent.mkdir()
+
+        if save_memory:
+            gp_to_save = GRBPopulation(Nb_GRBs=0)
+            for attr, val in self.__dict__.items():
+                if attr != 'properties':
+                    gp_to_save.__dict__[attr] = val
+        else:
+            gp_to_save = self
+
+        with open(fname, 'wb') as f:
+            pickle.dump(gp_to_save, f)
+        log.info('Saved GRB population to {}'.format(fname))
+        return fname
 
     def save_fig(self, fig, filename):
         try:
@@ -643,7 +748,11 @@ class GRBPopulation:
             full_width += 1
             log.warning("In GRBPopulation.summary(): the width you are asking for is odd."
                         " It was increased by 1 for esthetic purposes.")
-        max_len = max(map(len, self.properties)) + 1
+        try:
+            max_len = max(map(len, self.properties)) + 1
+        except ValueError:
+            max_len = 14
+
         if cell_width is None:
             cell_width = np.max([max_len, 14])
         center_width = full_width - 2*len(sides)
@@ -675,6 +784,7 @@ class GRBPopulation:
             summary += full_width * thin_line + "\n"
 
         # Properties
+        summary += full_width * thick_line + "\n"
         summary += sides + "Properties".center(center_width) + sides + "\n"
         summary += full_width * thick_line + "\n"
         summary += '|'.join([' prop'.ljust(cell_width),
@@ -711,7 +821,7 @@ class GRBPopulation:
         summary += full_width * thick_line + "\n"
         for key, val in sorted(self.normalization.items()):
             _key = f"{key} =".rjust(half_width)
-            _val = f" {val:.3f}".ljust(half_width)
+            _val = f" {val:.3e}".ljust(half_width)
             _summary = sides + _key + _val + sides + "\n"
             summary += _summary
 

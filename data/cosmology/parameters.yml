@@ -1,0 +1,4 @@
+parameters:
+  OmegaM: 0.3
+  OmegaL: 0.7
+  h: 0.7
