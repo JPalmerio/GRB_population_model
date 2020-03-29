@@ -142,15 +142,23 @@ cosmo = create_cosmology(OmegaM=0.3, OmegaL=0.7, h=0.7, z_step=0.001, zmax=100)
 
 Now that all of the initialization stuff is out of the way, creating the GRB population is as simple as:
 ```python
-gp = create_GRB_population_from(Nb_GRBs=config['Nb_GRBs'],
-                                cosmo=cosmo,
-                                params=params,
-                                incl_samples=incl_samples,
-                                incl_instruments=incl_instruments,
-                                incl_constraints=incl_constraints,
-                                output_dir=paths_to_dir['output'],
-                                run_mode='debug',
-                                savefig=True)
+io.create_output_dir(paths_to_dir=paths_to_dir, dir_name=config['output_dir'], overwrite=True)
+
+# Create the class instance
+gp = GRBPopulation(Nb_GRBs=config['Nb_GRBs'], output_dir=paths_to_dir['output'])
+# Draw the properties : z, L, Ep, alpha, beta, t90, Cvar
+gp.draw_GRB_properties(cosmo=cosmo, params=params, run_mode='debug', savefig=True)
+# Calculate the peak photon and energy fluxes for the included instruments
+# Also calculate the probability of detection for the included samples
+gp.calculate_quantities(instruments=incl_instruments, samples=incl_samples)
+# Create the mock constraints for the included constraints
+gp.create_mock_constraints(constraints=incl_constraints)
+# Compare the mock and real constraints and calculate the likelihood of the population
+gp.compare_to_observational_constraints(constraints=incl_constraints)
+# Normalize the population to the Intensity constraint of Stern et al. 2001
+gp.normalize_to_Stern()
+
+print(gp.summary())
 ```
 This might take a while depending on `Nb_GRBs`; I recommend $10^5$ for fast but reliable numbers.
 From this point on, you can access all the aspects of the population through the `gp` object.
@@ -253,7 +261,7 @@ You can create a new sample by simpling modifying the `samples.yml` file in the 
 ```yml
 YourSampleName:
   instrument: 'YourInstrument'
-  pflx_min: 42     # ph/s/cm2 in YourInstrument's energy band
+  pflx_min: 0.42     # ph/s/cm2 in YourInstrument's energy band
 ```
 For the moment the code only supports samples defined by a peak photon flux cut.
 If your instrument is not among the instruments already defined in the `instruments.yml` file, you can add it as:
@@ -266,4 +274,98 @@ YouInstrument:
 To include this sample in the GRB population simply add it to the list of samples in the `config.yml` file:
 ```yml
 samples: ['Stern', 'EpGBM', 'eBAT6', 'YourSampleName']
+```
+
+#### Observational constraints
+
+The observational constraints are assumed to be histograms of number counts for a given instrument.
+The data is collected in the directory `observational_constraints` in the form of a text file with 3 columns (`left bin edge`, `histogram`, `error`) separated by tabs.
+The name of the file should be the name of the constraint as defined in the `init/obs_constraints.yml` file.
+To add a new constraint, add to the `obs_constraints.yml`:
+```yml
+YourConstraint:
+  instrument: 'YourInstrument'
+  val_min: 0.42     # ph/s/cm2 in YourInstrument's energy band
+  prop_min: 'pht_pflx_YourInstrument'
+  quantity: 'z'
+  sum_ln_oi_factorial: 6870.371682542675 # this is the sum over all bins of ln(o_i!) where o_i in the number count in bin i
+  last_bin: 6.0
+```
+
+You can access the mock constraints through:
+```python
+gp.mock_constraints
+```
+This returns a dictionary with each key being the name of the constraint as defined in the `config.yml`:
+```yml
+constraints: ['Stern', 'EpGBM', 'eBAT6', 'YourConstraint']
+```
+You can access the content of the dictionary with:
+```python
+>>> gp.mock_constraints['Stern']
+
+{'val_min': 0.066825,
+ 'prop_min': 'pht_pflx_BATSE',
+ 'quantity': 'pht_pflx_BATSE',
+ 'bins': array([ 0.066825 ,  0.0841276,  0.10591  ,  0.133333 ,  0.167857 ,
+         0.211319 ,  0.266035 ,  0.334918 ,  0.421637 ,  0.53081  ,
+         0.66825  ,  0.841276 ,  1.0591   ,  1.33333  ,  1.67857  ,
+         2.11319  ,  2.66035  ,  3.34918  ,  4.21637  ,  5.3081   ,
+         6.6825   ,  8.41277  , 10.591    , 13.3333   , 16.       ,
+        20.       , 28.       , 50.       ]),
+ 'hist_unnormed': array([3544, 3280, 2903, 2805, 2463, 2133, 2043, 1812, 1591, 1391, 1239,
+        1100,  933,  803,  732,  598,  488,  418,  320,  249,  214,  145,
+          99,   54,   54,   69,   66]),
+ 'err_unnormed': array([59.53150426, 57.27128425, 53.87949517, 52.96225071, 49.62862077,
+        46.18441296, 45.19955752, 42.56759331, 39.88734135, 37.2961124 ,
+        35.19943181, 33.1662479 , 30.5450487 , 28.33725463, 27.05549852,
+        24.45403852, 22.09072203, 20.4450483 , 17.88854382, 15.77973384,
+        14.62873884, 12.04159458,  9.94987437,  7.34846923,  7.34846923,
+         8.30662386,  8.1240384 ]),
+ 'norm': 0.22923047296917426,
+ 'hist': array([812.3927962 , 751.87595134, 665.45606303, 642.99147668,
+        564.59465492, 488.94859884, 468.31785628, 415.36561702,
+        364.70568249, 318.8595879 , 284.01655601, 252.15352027,
+        213.87203128, 184.07206979, 167.79670621, 137.07982284,
+        111.86447081,  95.8183377 ,  73.35375135,  57.07838777,
+         49.05532122,  33.23841858,  22.69381682,  12.37844554,
+         12.37844554,  15.81690263,  15.12921122]),
+ 'err': array([13.64643488, 13.12832358, 12.35082216, 12.14056178, 11.37639221,
+        10.58687483, 10.36111595,  9.75778955,  9.14339412,  8.54940548,
+         8.0687824 ,  7.60271469,  7.00185596,  6.49576228,  6.20194472,
+         5.60561082,  5.06386666,  4.68662809,  4.10059936,  3.61719585,
+         3.35335272,  2.76030042,  2.28081441,  1.68449308,  1.68449308,
+         1.90413132,  1.86227717])}
+```
+
+#### Likelihood
+
+You can see how well your population fit the constraints by accessing the `likelihood_params` attribute:
+```python
+>>> gp.likelihood_params
+{'chi2_Stern': 32.130352211339904,
+ 'lnL_Stern': -16.065176105669952,
+ 'lnL_tot': -16.065176105669952,
+ 'chi2_tot': 32.130352211339904}
+```
+
+#### Population normalization
+You can find the normalization for your population in:
+```python
+>>> gp.normalization
+{'pseudo_collapse_rate': 2747967987338.383,    # Mpc3
+ 'T_sim': 28.41981981981982,                   # yr
+ 'T_sim_err': 1.0241376511646783,              # yr
+ 'R_intr': 3518.6711468965955,                 # GRB/yr
+ 'R_intr_err': 126.79896024852597,             # GRB/yr
+ 'nGRB0': 1.2804629322864484e-09,              # GRB/yr/Mpc
+ 'nGRB0_err': 4.6142808370682826e-11,          # GRB/yr/Mpc
+ }
+```
+Alternatively, you can provide your own normalization by replacing the following lines:
+```python
+# Normalize the population to the Intensity constraint of Stern et al. 2001
+# gp.normalize_to_Stern()
+# Replace with:
+gp.normalize_from(nGRB0=1.3e-9, nGRB0_err=0.4e-9) # Units: GRB/yr/Mpc3
 ```
