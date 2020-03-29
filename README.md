@@ -18,9 +18,9 @@ Make sure you have the following directory structure:
 └── grbpop
 ```
 The `data/ECLAIRs` directory is optional; you only need it if you want to make prediction for ECLAIRs.
-The `data/cosmology` directory is also optional; you can create your own cosmology if you wish (see this).
+The `data/cosmology` directory is also optional; you can create your own cosmology if you wish (see *Setting up the cosmology).
 
-A basic example is shown below, if you want more details see [*detailed usage*]() below:
+A basic example is shown below, if you want more details see *detailed usage* below:
 ```python
 from cosmology import init_cosmology
 from GRB_population import create_GRB_population_from
@@ -103,11 +103,11 @@ There are 5 files in the `init_dir`:
 │   ├── parameters.yml
 │   ├── instruments.yml
 │   ├── samples.yml
-│   ├── obs_constraints.yml
-├── observational_constraints
-│   ├── EpGBM.txt
-│   ├── Stern.txt
-│   └── eBAT6.txt
+│   └── obs_constraints.yml
+└── observational_constraints
+    ├── EpGBM.txt
+    ├── Stern.txt
+    └── eBAT6.txt
 ```
 Of these 5 files, you will probably want to modify the `config.yml` and the `parameters.yml` to fit your needs.
 You can also specify where the observational constraints are to be found by passing an `obs_dir` argument; by default the above structure is assumed.
@@ -246,3 +246,24 @@ And the properties that are calculated:
 | erg_flnc_*instr* | erg/cm2 |  The energy fluence for a given *instrument*
 | pdet_*sample* | - | The probability of detection for a given *sample*
 
+#### Samples and instruments
+Each sample[^1] is defined by a minimum peak photon flux and an instrument.
+[^1]: Except the ECLAIRs and SHOALS samples but they had to be hard coded.
+You can create a new sample by simpling modifying the `samples.yml` file in the `init` directory:
+```yml
+YourSampleName:
+  instrument: 'YourInstrument'
+  pflx_min: 42     # ph/s/cm2 in YourInstrument's energy band
+```
+For the moment the code only supports samples defined by a peak photon flux cut.
+If your instrument is not among the instruments already defined in the `instruments.yml` file, you can add it as:
+```yml
+YouInstrument:
+  Emin: 10.  # keV
+  Emax: 1000. # kev
+```
+
+To include this sample in the GRB population simply add it to the list of samples in the `config.yml` file:
+```yml
+samples: ['Stern', 'EpGBM', 'eBAT6', 'YourSampleName']
+```
