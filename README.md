@@ -18,9 +18,9 @@ Make sure you have the following directory structure:
 └── grbpop
 ```
 The `data/ECLAIRs` directory is optional; you only need it if you want to make prediction for ECLAIRs.
-The `data/cosmology` directory is also optional; you can create your own cosmology if you wish (see *Setting up the cosmology).
+The `data/cosmology` directory is also optional; you can create your own cosmology if you wish (see ***Setting up the cosmology***).
 
-A basic example is shown below, if you want more details see *detailed usage* below:
+A basic example is shown below, if you want more details see ***Detailed usage*** below:
 ```python
 from cosmology import init_cosmology
 from GRB_population import create_GRB_population_from
