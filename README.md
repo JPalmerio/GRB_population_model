@@ -146,15 +146,20 @@ io.create_output_dir(paths_to_dir=paths_to_dir, dir_name=config['output_dir'], o
 
 # Create the class instance
 gp = GRBPopulation(Nb_GRBs=config['Nb_GRBs'], output_dir=paths_to_dir['output'])
+
 # Draw the properties : z, L, Ep, alpha, beta, t90, Cvar
 gp.draw_GRB_properties(cosmo=cosmo, params=params, run_mode='debug', savefig=True)
+
 # Calculate the peak photon and energy fluxes for the included instruments
 # Also calculate the probability of detection for the included samples
 gp.calculate_quantities(instruments=incl_instruments, samples=incl_samples)
+
 # Create the mock constraints for the included constraints
 gp.create_mock_constraints(constraints=incl_constraints)
+
 # Compare the mock and real constraints and calculate the likelihood of the population
 gp.compare_to_observational_constraints(constraints=incl_constraints)
+
 # Normalize the population to the Intensity constraint of Stern et al. 2001
 gp.normalize_to_Stern()
 
@@ -254,7 +259,14 @@ And the properties that are calculated:
 | erg_flnc_*instr* | erg/cm2 |  The energy fluence for a given *instrument*
 | pdet_*sample* | - | The probability of detection for a given *sample*
 
+##### Special case of *ECLAIRs*
+
+For *ECLAIRs*, the detection is more complicated as there is a peak flux mode and a fluence mode.
+For this reason there is a `pdet_ECLAIRs_tot`, for the total probability of detection, a `pdet_ECLAIRs_pht_cts` for the photon count probability of detection and a `pdet_ECLAIRs_pht_flnc` for a photon fluence probability of detection.
+In the same way, the `pflx` prefix is replaced by `cts` in the table above.
+
 #### Samples and instruments
+
 Each sample[^1] is defined by a minimum peak photon flux and an instrument.
 [^1]: Except the ECLAIRs and SHOALS samples but they had to be hard coded.
 You can create a new sample by simpling modifying the `samples.yml` file in the `init` directory:
