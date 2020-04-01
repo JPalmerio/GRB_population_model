@@ -282,10 +282,12 @@ def Erg_flux_ECLAIRs(L, z, Ep, D_L, alpha, beta, ktild, Emin, Emax, eff_area_A_t
         xmin = (1.+z)*Emin/Ep
         xmax = (1.+z)*Emax/Ep
         x = np.logspace(np.log10(xmin), np.log10(xmax), precision)
+        E_grid = x * Ep / (1.+z)
+        eff_A = eff_area_A_tot[eff_area_E_tot.searchsorted(E_grid)]
         if f90:
-            xB = f90f.f90f.integrate_1d(x=x, y=xBtild(x, ktild, alpha, beta))
+            xB = f90f.f90f.integrate_1d(x=x, y=eff_A*xBtild(x, ktild, alpha, beta))
         else:
-            xB = integrate.trapz(xBtild(x, ktild, alpha, beta), x, axis=0)
+            xB = integrate.trapz(eff_A*xBtild(x, ktild, alpha, beta), x, axis=0)
         Erg_flux_ECLAIRs = xB * L/(4.*np.pi*(D_L*cst.Mpc)**2)  # in cgs (erg/cm2/s)
 
     return Erg_flux_ECLAIRs
@@ -421,18 +423,18 @@ def calc_det_prob_SVOM(cts, offax_corr, omega_ECLAIRs, omega_ECLAIRs_tot, t90obs
             det_prob_flnc = np.zeros(cts.shape)
             flnc = cts * Cvar * t90obs
             cts_thresh = n_sigma * np.sqrt(bkg_total)
-            flnc_thresh = n_sigma * np.sqrt(bkg_total*t90obs)
+            flnc_thresh = n_sigma * np.sqrt(bkg_total/t90obs)
             for i in range(cts.shape[0]):
-                _det_prob_cts = np.where((cts * offax_corr >= cts_thresh[i]),
+                _det_prob_cts = np.where((cts[i] * offax_corr >= cts_thresh),
                                          np.ones(offax_corr.shape),
                                          np.zeros(offax_corr.shape))
-                _det_prob_flnc = np.where((flnc * offax_corr >= flnc_thresh[i]),
+                _det_prob_flnc = np.where((flnc[i] * offax_corr >= flnc_thresh[i]),
                                           np.ones(offax_corr.shape),
                                           np.zeros(offax_corr.shape))
                 _det_prob_tot = (_det_prob_flnc == 1) | (_det_prob_cts == 1)
-                det_prob_tot[i] = np.sum(_det_prob_tot*omega_ECLAIRs)/omega_ECLAIRs_tot
-                det_prob_cts[i] = np.sum(_det_prob_cts*omega_ECLAIRs)/omega_ECLAIRs_tot
-                det_prob_flnc[i] = np.sum(_det_prob_flnc*omega_ECLAIRs)/omega_ECLAIRs_tot
+                det_prob_tot[i] = np.sum(_det_prob_tot*omega_ECLAIRs)/(4*np.pi)
+                det_prob_cts[i] = np.sum(_det_prob_cts*omega_ECLAIRs)/(4*np.pi)
+                det_prob_flnc[i] = np.sum(_det_prob_flnc*omega_ECLAIRs)/(4*np.pi)
     else:
         if isinstance(t90obs, np.ndarray) or isinstance(Cvar, np.ndarray):
             raise ValueError('If cts is a scalar, t90obs and Cvar must also be scalars and not arrays.')

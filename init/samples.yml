@@ -29,6 +29,9 @@ HETE2_FRE:
 HETE2_WXM:
   instrument: 'WXM'
   pflx_min: 1.0 # ph/s/cm2 in 2-10 keV
+HETE2_WXM_large:
+  instrument: 'WXM_large'
+  pflx_min: 1.0 # ph/s/cm2 in 2-30 keV
 SHOALS:
   instrument: 'BAT'
   pflx_min: 1.0e-6 # FLUENCE !! erg/cm2 in 15-150 keV

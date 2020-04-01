@@ -572,7 +572,8 @@ def plot_eBAT6_EpL(fname=None, axes=None, fname_lim=None, mini_cax=False, kde=Fa
     return
 
 
-def plot_eBAT6_EpL_for_pub(fname=None, axes=None, fname_lim=None, mini_cax=False, kde=False, show_relation=True):
+def plot_eBAT6_EpL_for_pub(fname=None, axes=None, fname_lim=None, mini_cax=False, kde=False,
+    show_relation=True):
     if fname is None:
         fname = root_dir/'catalogs/BAT6_cat/eBAT6_cat.txt'
     if fname_lim is None:
@@ -780,7 +781,8 @@ def plot_ndarray_unbinned_cdf_with_limits(ax, data, x_is_log=False, arrow_size=N
     return artist
 
 
-def plot_ndarray_cdf_lim_only(ax, ndarr, x_is_log=False, arrow_size=None, color='k', alpha=0.8, loc='bottom', **kwargs):
+def plot_ndarray_cdf_lim_only(ax, ndarr, x_is_log=False, arrow_size=None, color='k', alpha=0.8,
+    loc='bottom', **kwargs):
 
     xmin = ndarr[0].min()
     xmax = ndarr[0].max()

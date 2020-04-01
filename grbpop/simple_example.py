@@ -34,6 +34,7 @@ incl_samples, incl_instruments, incl_constraints = io.create_config(config,
                                                                     samples,
                                                                     instruments,
                                                                     obs_constraints)
+
 # Initialize the cosmology
 cosmo = init_cosmology(paths_to_dir['cosmo'])
 # If you want to create your own cosmology use:
@@ -50,7 +51,7 @@ gp = create_GRB_population_from(Nb_GRBs=config['Nb_GRBs'],
                                 ECLAIRs_prop=ECLAIRs_prop,
                                 output_dir=paths_to_dir['output'],
                                 run_mode='debug',
-                                savefig=True,)
+                                savefig=True)
 # This function is equivalent to the following:
 # gp = GRBPopulation(Nb_GRBs=config['Nb_GRBs'], output_dir=paths_to_dir['output'])
 # gp.draw_GRB_properties(cosmo=cosmo, params=params, run_mode='debug', savefig=True)

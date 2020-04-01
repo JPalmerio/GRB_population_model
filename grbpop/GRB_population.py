@@ -193,6 +193,8 @@ class GRBPopulation:
             z_pdf_comov = ff.qD06(z_range, SFR=params['SFR'])
         elif model == 'P16':
             z_pdf_comov = ff.P16(z_range, gamma_0=0.0204, gamma_1=1.8069, gamma_2=3.1724, gamma_3=7.2690)
+        elif model == 'MD14':
+            z_pdf_comov = ff.MD14(z_range)
         else:
             raise NotImplementedError
 
@@ -465,8 +467,8 @@ class GRBPopulation:
         self.draw_L(**params['luminosity_function'])
         self.draw_Ep(**params['peak_energy_distribution'])
         self.draw_spec(**params['spectral_shape'])
-
         self.properties['Epobs'] = self.properties['Ep']/(1. + self.properties['z'])
+
         # Use the function from physics module to avoid unecessary
         # checks present in the class method
         ph.calc_peak_photon_flux(GRB_prop=self.properties,
@@ -644,8 +646,9 @@ class GRBPopulation:
         R_intr = nGRB0 * self.normalization['pseudo_collapse_rate']
         T_sim = self.Nb_GRBs/R_intr
         if nGRB0_err is not None:
-            R_intr_err = R_intr * nGRB0_err/nGRB0
-            T_sim_err = T_sim * R_intr_err/R_intr
+            rel_error = nGRB0_err/nGRB0
+            R_intr_err = R_intr * rel_error
+            T_sim_err = T_sim * rel_error
         else:
             R_intr_err = np.nan
             T_sim_err = np.nan
@@ -658,7 +661,7 @@ class GRBPopulation:
         self.normalization['T_sim_err'] = T_sim_err
         return
 
-    def normalize_to_Stern(self):
+    def normalize_to_Stern(self, method=1):
         """
             Normalize the population using the Stern constraints.
             This yields T_sim the duration of the simulation
@@ -666,33 +669,39 @@ class GRBPopulation:
         if 'Stern' not in self.mock_constraints.keys():
             raise KeyError("You must first create_mock_constraints for Stern before trying to"
                            " normalize an LGRB population")
-        N_BATSE = np.sum(self.mock_constraints['Stern']['hist_unnormed'])
-        # Simulation duration
-        T_sim = N_BATSE / R_tot_BATSE
-        T_sim_err = T_sim * R_tot_BATSE_err/R_tot_BATSE
-        # Intrinsic Rate
-        R_intr = self.Nb_GRBs/T_sim  # LGRB/yr in 4 pi above Lmin
-        R_intr_err = R_intr * T_sim_err/T_sim
-        # Local LGRB comoving rate density
-        nGRB0 = R_intr / self.normalization['pseudo_collapse_rate']
-        nGRB0_err = nGRB0 * R_intr_err/R_intr
 
-        self.normalization['T_sim'] = T_sim
-        self.normalization['T_sim_err'] = T_sim_err
-        self.normalization['R_intr'] = R_intr
-        self.normalization['R_intr_err'] = R_intr_err
-        self.normalization['nGRB0'] = nGRB0
-        self.normalization['nGRB0_err'] = nGRB0_err
+        # First method, total BATSE rate
+        if method == 0:
+            N_BATSE = np.sum(self.mock_constraints['Stern']['hist_unnormed'])
+            T_sim = N_BATSE / R_tot_BATSE
 
         # Second method: chi2 minimisation
-        if 'norm' not in self.mock_constraints['Stern'].keys():
-            log.warning('Could not calculate T_sim_from_chi2 since no normalization'
-                        ' was found for Stern')
-        else:
-            norm = self.mock_constraints['Stern']['norm']
-            T_sim_from_chi2 = T_live_BATSE/norm
-            self.normalization['T_sim_from_chi2'] = T_sim_from_chi2
+        if method == 1:
+            if 'norm' not in self.mock_constraints['Stern'].keys():
+                # If compare_to_observational_constraints has not been called
+                with open(root_dir/'init/obs_constraints.yml', 'r') as f:
+                    constraints = yaml.safe_load(f)
+                load_observational_constraints(constraints)
+                norm = self._normalize_to_constraint(mod=self.mock_constraints['Stern']['hist_unnormed'],
+                                                     obs=constraints['Stern']['hist'],
+                                                     err=constraints['Stern']['err'])
+            else:
+                norm = self.mock_constraints['Stern']['norm']
+            T_sim = T_live_BATSE/norm
 
+        # Intrinsic Rate
+        R_intr = self.Nb_GRBs/T_sim  # LGRB/yr in 4 pi above Lmin
+        # Local LGRB comoving rate density in LGRB/yr/Mpc3 in 4 pi above Lmin at z=0
+        nGRB0 = R_intr / self.normalization['pseudo_collapse_rate']
+
+        rel_error = R_tot_BATSE_err/R_tot_BATSE
+
+        self.normalization['T_sim'] = T_sim
+        self.normalization['T_sim_err'] = T_sim * rel_error
+        self.normalization['R_intr'] = R_intr
+        self.normalization['R_intr_err'] = R_intr * rel_error
+        self.normalization['nGRB0'] = nGRB0
+        self.normalization['nGRB0_err'] = nGRB0 * rel_error
         return
 
     def _normalize_to_constraint(self, mod, obs, err):

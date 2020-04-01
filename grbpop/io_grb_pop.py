@@ -109,7 +109,7 @@ def read_init_files(paths_to_files):
     return config, params, instruments, samples, obs_constraints
 
 
-def create_config(config, samples, instruments, obs_constraints):
+def create_config(config, samples, instruments, obs_constraints, obs_dir=None):
     """
         Filter the samples, instruments, and observation constraint
         dictionaries to return only the ones included in the config.
@@ -120,7 +120,7 @@ def create_config(config, samples, instruments, obs_constraints):
     incl_samples = included_samples(config['samples'], samples)
     incl_instruments = included_instruments(incl_samples, instruments)
     incl_constraints = included_constraints(config['constraints'], obs_constraints)
-    incl_constraints = load_observational_constraints(incl_constraints)
+    incl_constraints = load_observational_constraints(incl_constraints, obs_dir=obs_dir)
     return incl_samples, incl_instruments, incl_constraints
 
 
@@ -171,21 +171,21 @@ def included_instruments(incl_samples, instruments):
     return incl_instruments
 
 
-def load_observational_constraints(obs_constraints):
+def load_observational_constraints(obs_constraints, obs_dir=None):
     """
         Read the observational data once and for all and store them in
         a dictionary to be used by the fitting procedure.
     """
 
     for name, constraint in obs_constraints.items():
-        bins, hist, err = read_constraint(name, last_bin_edge=constraint['last_bin'])
+        bins, hist, err = read_constraint(name, last_bin_edge=constraint['last_bin'], obs_dir=obs_dir)
         constraint['bins'] = bins
         constraint['hist'] = hist
         constraint['err'] = err
     return obs_constraints
 
 
-def read_constraint(name, last_bin_edge, bins_log=False, density=False, verbose=False):
+def read_constraint(name, last_bin_edge, bins_log=False, obs_dir=None, density=False, verbose=False):
     """
         A convenience function to read the observational constraint from
         a file. Assumes the format of the file is:
@@ -198,7 +198,12 @@ def read_constraint(name, last_bin_edge, bins_log=False, density=False, verbose=
     if name not in valid_names:
         raise ValueError('Constraint name must be one of {}'.format(valid_names))
 
-    fname = root_dir/f'observational_constraints/{name}.txt'
+    if obs_dir is None:
+        fname = root_dir/f'observational_constraints/{name}.txt'
+    else:
+        if not isinstance(obs_dir, Path):
+            paths_to_dir = Path(obs_dir)
+        fname = paths_to_dir/f'{name}'.txt
 
     bins = read_column(fname, 0, array=False)
     hist = read_column(fname, 1)
@@ -276,7 +281,7 @@ def create_output_dir(paths_to_dir, dir_name, overwrite=False):
 
     log.info(f"Output directory updated to {_output_dir}")
 
-    return
+    return _output_dir
 
 
 def read_column(filename, column_nb, end=None, dtype=float, array=True, splitter=None, stripper=None, verbose=False):

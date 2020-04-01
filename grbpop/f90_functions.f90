@@ -103,21 +103,21 @@ CONTAINS
 
 
         omega_ECL_tot = SUM(omega_ECL)
-
+        WRITE(*,*) 'New version of ECLAIRs det prob'
         DO GRB=0, N
             WHERE(offax_corr(0:N_off,0:N_off) >= n_sigma * SQRT(threshold)/cts_ECL(GRB) )
               pixel_det_cts = 1
             ELSEWHERE
               pixel_det_cts = 0
             END WHERE
-            det_prob(1,GRB) = SUM(pixel_det_cts * omega_ECL) / omega_ECL_tot
+            det_prob(1,GRB) = SUM(pixel_det_cts * omega_ECL) / (4.d0*ACOS(-1.d0)) ! omega_ECL_tot
             
             WHERE(offax_corr(0:N_off,0:N_off) >= n_sigma * SQRT(threshold/t90obs(GRB)) / (cts_ECL(GRB) * Cvar(GRB)) )
               pixel_det_flnc = 1
             ELSEWHERE
               pixel_det_flnc = 0
             END WHERE
-            det_prob(2,GRB) = SUM(pixel_det_flnc * omega_ECL) / omega_ECL_tot
+            det_prob(2,GRB) = SUM(pixel_det_flnc * omega_ECL) / (4.d0*ACOS(-1.d0)) ! omega_ECL_tot
             
             WHERE(pixel_det_cts(0:N_off,0:N_off) == 1)
                 pixel_det_tot = 1
@@ -127,7 +127,7 @@ CONTAINS
                 pixel_det_tot = 0
             END WHERE
 
-            det_prob(0,GRB) = SUM(pixel_det_tot * omega_ECL) / omega_ECL_tot
+            det_prob(0,GRB) = SUM(pixel_det_tot * omega_ECL) / (4.d0*ACOS(-1.d0)) ! omega_ECL_tot
             ! WRITE(*,*) 'GRB number ', GRB,' det_prob: ', det_prob
         END DO
 

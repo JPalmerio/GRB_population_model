@@ -1,0 +1,12 @@
+# Results will be saved in root_dir/model_outputs/output_dir/
+output_dir: 'basic_example'
+
+Nb_GRBs: '1e5'
+
+# Samples can be anything you define in the samples.yml file
+samples: ['Stern']
+
+constraints: ['Stern']
+
+likelihood:
+  epsilon: 1.0E-3

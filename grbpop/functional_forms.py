@@ -28,7 +28,9 @@ def SH(z, a=2.37, b=1.8, zm=2, nu=0.178, IMF_norm=0.007422):
         Returns an event rate in units of yr-1 Mpc-3
         Note : nu is in units of Msun/yr/Mpc3 and IMF_norm in units of Msun-1
     """
-    return IMF_norm * nu * a * np.exp(b*(z-zm)) / ((a-b) + b*np.exp(a*(z-zm)))
+    shape = a * np.exp(b*(z-zm)) / ((a-b) + b*np.exp(a*(z-zm)))
+    norm = IMF_norm * nu
+    return norm*shape
 
 
 def BExp(z, a=1.1, b=-0.57, zm=1.9, SFR_norm=0.02744, IMF_norm=0.007422):
@@ -36,15 +38,16 @@ def BExp(z, a=1.1, b=-0.57, zm=1.9, SFR_norm=0.02744, IMF_norm=0.007422):
         GRB rate as parametrized by a broken exponential function.
         Default values are chosen as best fit from SFR of Vangioni+15
         If you leave the default SFR_norm and IMF_norm, the result
-        will be in units of yr-1 Mpc-3.
+        will be in units of core-collapses yr-1 Mpc-3.
         IMF_norm is in units of M_sun-1 and converts the CSFRD (in
         units of M_sun yr-1 Mpc-3) to a core-collapse rate density (in
         units of yr-1 Mpc-3).
         SFR_norm is adjusted on the functional form of Springel-Hernquist
         (SH) with the parameter values of Vangioni+15.
     """
-    rate = np.where(z <= zm, np.exp(a*z), np.exp(b*z) * np.exp((a-b)*zm))
-    return SFR_norm*IMF_norm*rate
+    shape = np.where(z <= zm, np.exp(a*z), np.exp(b*z) * np.exp((a-b)*zm))
+    norm = IMF_norm * SFR_norm
+    return norm*shape
 
 
 def BPL_z(z, a=2.07, b=-1.36, zm=3.11, nGRB0=1.3e-9, eta0=1, av_jet_ang=1):
@@ -53,11 +56,24 @@ def BPL_z(z, a=2.07, b=-1.36, zm=3.11, nGRB0=1.3e-9, eta0=1, av_jet_ang=1):
         The default values are from Wanderman & Piran 2010
         The norm is given by them as well:
         converted to units of yr-1 Mpc-3 (carefull this is the LGRB rate
-        not the core-collapse rate, you need to multiply by the
-        efficiency eta0 and the average opening angle.)
+        not the core-collapse rate, you need to divide by the
+        efficiency eta0 and the average opening angle fraction.)
     """
     shape = np.where(z <= zm, (1.+z)**a, (1.+z)**b * (1.+zm)**(a-b))
-    return eta0*av_jet_ang*nGRB0*shape
+    norm = nGRB0/(eta0*av_jet_ang)
+    return norm*shape
+
+
+def MD14(z, gamma_0=0.015, gamma_1=2.7, gamma_2=2.9, gamma_3=5.6, IMF_norm=0.007422):
+    """
+        The Star Formation Rate Density from Madau & Dickinson 2014,
+        converted to a core-collapse rate assuming Salpeter IMF.
+        Returns an CC comoving event rate density in units of
+        [yr-1 Mpc-3]
+    """
+    shape = (1.+z)**gamma_1 / (1. + ((1.+z)/gamma_2)**gamma_3)
+    norm = IMF_norm*gamma_0
+    return norm*shape
 
 
 def P16(z, gamma_0=1.3e-9, gamma_1=1.8069, gamma_2=3.1724, gamma_3=7.2690):
@@ -71,7 +87,8 @@ def P16(z, gamma_0=1.3e-9, gamma_1=1.8069, gamma_2=3.1724, gamma_3=7.2690):
         [yr-1 Mpc-3]
     """
     shape = (1.+z)**gamma_1 / (1. + ((1.+z)/gamma_2)**gamma_3)
-    return gamma_0*shape
+    norm = gamma_0
+    return norm*shape
 
 
 def qD06(z, SFR, mod='A', IMF_norm=0.0122):
@@ -101,7 +118,8 @@ def qD06(z, SFR, mod='A', IMF_norm=0.0122):
         raise ValueError('SFR must be an int equal to 1, 2, or 3.')
 
     shape = a_s[SFR-1]*np.exp(b_s[SFR-1]*z) / (d_s[SFR-1] + np.exp(c_s[SFR-1]*z))
-    return IMF_norm * k_s[SFR-1] * shape
+    norm = k_s[SFR-1] * IMF_norm
+    return norm*shape
 
 
 def D06(z, a, b, c, d, IMF_norm=0.0122):
@@ -118,4 +136,5 @@ def D06(z, a, b, c, d, IMF_norm=0.0122):
     """
 
     shape = a*np.exp(b*z) / (d + np.exp(c*z))
-    return IMF_norm * shape
+    norm = IMF_norm
+    return norm*shape

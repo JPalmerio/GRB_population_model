@@ -25,7 +25,7 @@ def init_cosmology(cosmo_dir):
     return cosmo
 
 
-def create_cosmology(OmegaM=0.27, OmegaL=0.73, h=0.71, zmax=20, z_step=0.001, verbose=True):
+def create_cosmology(OmegaM=0.27, OmegaL=0.73, h=0.71, zmax=100, z_step=0.001, verbose=True):
     """
         Create your own cosmology with OmegaM, OmegaL and H0 = 100*h.
         step is the interval of the redshift array.
@@ -33,7 +33,7 @@ def create_cosmology(OmegaM=0.27, OmegaL=0.73, h=0.71, zmax=20, z_step=0.001, ve
     if verbose:
         log.info("Creating cosmology with: OmegaM = {}, OmegaL = {}, H0 = {}".format(OmegaM, OmegaL, 100.*h))
     cosmo = {}
-    z = np.arange(0, zmax, z_step)
+    z = np.linspace(0, zmax, int(zmax/z_step))
     N = len(z)
     cdivH0 = cLight/(10.**7*h)
     # Luminosity distance

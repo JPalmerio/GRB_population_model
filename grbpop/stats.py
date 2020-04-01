@@ -14,20 +14,21 @@ def draw_from_cdf_file(filename, N_draws, **args):
         Draw from an ascii file that contains two columns:
         x, CDF(x)
     """
-    value_range = read_column(filename, 0)
-    cdf = read_column(filename, 1)
+    value_range = read_column(filename, 0, **args)
+    cdf = read_column(filename, 1, **args)
     draws = np.random.rand(N_draws)
     values = value_range[cdf.searchsorted(draws)]
     return values
 
 
 def create_pdf_from_cdf_file(filename, **args):
+    """
+        Turn a CDF into a PDF from a file containing two columns:
+        x, CDF(x)
+    """
     x = read_column(filename, 0, **args)
     cdf = read_column(filename, 1, **args)
-    pdf = np.zeros(len(cdf))
     pdf = cdf[1:]-cdf[:-1]
-    for i in range(1,len(cdf)):
-        pdf[i] = cdf[i]-cdf[i-1]
     return x, pdf
 
 
@@ -63,7 +64,7 @@ def chi2(mod, obs, err):
     return np.sum((np.abs(mod-obs)/err)**2)
 
 
-def unbinned_empirical_cdf(data, weights=1):
+def unbinned_empirical_cdf(data, weights=None):
     """
         From the answer of Dave at http://stackoverflow.com/questions/3209362/how-to-plot-empirical-cdf-in-matplotlib-in-python
         Note : if you wish to plot, use arg drawstyle='steps-post', I found it is the most accurate
@@ -88,15 +89,16 @@ def unbinned_empirical_cdf(data, weights=1):
             The cumulative distribution function that follows the formal definition of CDF(x) = "number of samples <= x"/"number of samples"
     """
     sorted_data = np.sort(data)
-    if isinstance(weights, np.ndarray):
+    N = len(data)
+    if weights is None:
+        CDF = np.arange(1, N+1) / float(N)
+    else:
         # create 2D array with data and weights
         arr = np.column_stack((data, weights))
         # Sort them by ascending data, need to use this method and not np.sort()
         arr = arr[arr[:,0].argsort()]
         CDF = np.cumsum(arr[:,1]).astype(float)
         CDF /= CDF[-1]
-    else:
-        CDF = np.arange(1, len(sorted_data)+1) / float(len(sorted_data))
     return sorted_data, CDF
 
 
@@ -557,7 +559,8 @@ def compute_CDF_bounds_by_MC(sample, sample_errp, sample_errm=None, sample_ll=No
     return bins_mid, median, lower, upper, fig
 
 
-def MC_realization(sample, sample_errp, sample_errm=None, sample_ll=None, sample_ul=None, ll_max_val=None, ul_min_val=None, N_MC=1000, positive=False):
+def MC_realization(sample, sample_errp, sample_errm=None, sample_ll=None, sample_ul=None,
+    ll_max_val=None, ul_min_val=None, N_MC=1000, positive=False):
     """
         Function to create a realization of a sample with errors and upper limits.
         This assumes the value's PDF's can be represented by asymmetric gaussians whose sigmas are the plus and minus error.
@@ -662,7 +665,8 @@ def asym_gaussian_draw(mu, sigma1, sigma2, nb_draws=1000, precision=500, positiv
     return draw
 
 
-def asym_gaussian_pdf(mu, sigma1, sigma2, x_min=None, x_max=None, cumulative=False, precision=500, ax=None, **kwargs):
+def asym_gaussian_pdf(mu, sigma1, sigma2, x_min=None, x_max=None, cumulative=False, precision=500,
+    ax=None, **kwargs):
     """
     Function that returns an asymmetric gaussian distribution.
     in the form :   { exp( -(x-mu)**2/(2*sigma1**2) )     if x < mu

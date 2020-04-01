@@ -11,6 +11,9 @@ FREGATE:
 WXM:
   Emin: 2.  # keV
   Emax: 10. # keV
+WXM_large:
+  Emin: 2.  # keV
+  Emax: 10. # keV
 GBM:
   Emin: 10.    # keV
   Emax: 1000. # keV
