@@ -1,6 +1,8 @@
 from ECLAIRs import init_ECLAIRs
 from cosmology import init_cosmology, create_cosmology
 from GRB_population import GRBPopulation, create_GRB_population_from
+import plotting_functions as pf
+import matplotlib.pyplot as plt
 import io_grb_pop as io
 import numpy as np
 import logging
@@ -60,3 +62,13 @@ gp = create_GRB_population_from(Nb_GRBs=config['Nb_GRBs'],
 # gp.compare_to_observational_constraints(constraints=incl_constraints)
 # gp.normalize_to_Stern()
 # print(gp.summary())
+try:
+    plt.style.use('presentation')
+except:
+    pass
+fig, axes = plt.subplots(1,3, figsize=(15,4), tight_layout=False)
+pf.plot_intensity_constraint(axes[0], pop=gp, label='Simple Example', color='C3')
+pf.plot_spectral_constraint(axes[1], pop=gp, label='Simple Example', color='C3')
+pf.plot_redshift_constraint(axes[2], pop=gp, label='Simple Example', color='C3')
+
+fig.savefig(paths_to_dir['output']/'constraints_simple_example.pdf', bbox_inches='tight')

@@ -64,7 +64,7 @@ def plot_spectral_constraint(ax, pop=None, plot_obs=True, **kwargs):
         bins, obs_lin, err_lin = io.read_constraint(name='EpGBM', density=True, bins_log=True, last_bin_edge=1e4)
         x, x_errp, x_errm = xerr_from_bins(bins, logscale=True)
         ax.errorbar(x, obs_lin, xerr=[x_errm, x_errp], yerr=err_lin, color='k', fmt='none')
-        plot_obs_property('../catalogs/GBM_cat/fermi_GBM_cat_total.dat',
+        plot_obs_property(root_dir/'catalogs/GBM_cat/fermi_GBM_cat_total.dat',
                           key='pflx_band_epeak',
                           func=[msc.filter_df, msc.filter_df],
                           func_args=[{'filtering_key':'t90', 'lim_min':2, 'errors':'coerce'},
@@ -107,7 +107,7 @@ def plot_redshift_constraint(ax, pop=None, plot_obs=True, **kwargs):
     if plot_obs:
         bins_eBAT6, obs_lin, err_lin = io.read_constraint(name='eBAT6', density=True, last_bin_edge=6)
         x, x_errp, x_errm = xerr_from_bins(bins_eBAT6)
-        plot_obs_property('../catalogs/BAT6_cat/eBAT6_cat.txt', header=3,
+        plot_obs_property(root_dir/'catalogs/BAT6_cat/eBAT6_cat.txt', header=3,
                           key='redshift',
                           log=False, verbose=True, kde=True,
                           bins=bins_eBAT6,
@@ -487,7 +487,7 @@ def plot_obs_property(fname, key, func=None, func_args={}, ax=None, log=False, k
 
     ax.hist(df_prop, **kwargs)
     if kde:
-        sns.kdeplot(df_prop, ax=ax, color='k', linewidth=2, label='KDE')
+        sns.kdeplot(df_prop.dropna(), ax=ax, color='k', linewidth=2, label='KDE')
     return df_prop
 
 
