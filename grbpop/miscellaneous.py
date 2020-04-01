@@ -199,6 +199,10 @@ def efficiency_correction_Stern(pflx, c_e0=0.097, nu=2.34, norm=0.7):
     return norm * (1.0 - np.exp(-(c_e/c_e0)**2))**nu
 
 
+def k_correction(z, photon_index=1.5, zm=2.):
+    return ((1.+z)/(1+zm))**(photon_index-2)
+
+
 def str2bool(s):
     if s.lower() in ('yes', 'true', 't', 'y', '1'):
         return True
