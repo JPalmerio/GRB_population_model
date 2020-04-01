@@ -22,12 +22,14 @@ The `data/cosmology` directory is also optional; you can create your own cosmolo
 
 A basic example is shown below, if you want more details see ***Detailed usage*** below:
 ```python
+import sys
+src_dir = 'grbpop/'
+sys.path.insert(0, src_dir)
 from cosmology import init_cosmology
 from GRB_population import create_GRB_population_from
 import io_grb_pop as io
 import numpy as np
 import logging
-import sys
 
 log = logging.getLogger(__name__)
 logging.basicConfig(stream=sys.stdout, level=logging.INFO,
