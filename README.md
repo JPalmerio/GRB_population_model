@@ -3,10 +3,15 @@
 `grbpop` allows one to create a population of Gamma-Ray Bursts (GRBs).
 Using Monte Carlo sampling from input distributions, one can then compare the predictions for various observational constraints.
 If you have any questions, please contact <palmerio@iap.fr>
+# Installation
+There is no pip installation for now, the simplest way to get this code is to git clone this repository:
+```
+git clone https://github.com/JPalmerio/GRB_population_model.git
+```
 
 # Basic usage
 The arborescence is important for this software.
-Make sure you have the following directory structure:
+Make sure you have the following directory structure (this is the default if you clone the directory):
 ```bash
 .
 ├── data
