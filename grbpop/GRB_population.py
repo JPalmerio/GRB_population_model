@@ -36,8 +36,8 @@ def create_GRB_population_from(Nb_GRBs, cosmo, params, incl_instruments, incl_sa
     if nGRB0 is None:
         GRB_pop.normalize_to_Stern()
     else:
-        GRB_pop.normalize_from(nGRB0)
-    print(GRB_pop.summary())
+        GRB_pop.normalize_from(nGRB0, nGRB0_err)
+    GRB_pop.summary()
     return GRB_pop
 
 
@@ -58,16 +58,18 @@ class GRBPopulation:
                 raise ValueError("Properties must be a pandas DataFrame instance.")
             self.Nb_GRBs = len(properties)
             self.properties = properties
-        self.parameters = {}
-        self.mock_constraints = {}
-        self.likelihood_params = {}
-        self.normalization = {}
+
         if output_dir is None:
             self.output_dir = Path().cwd()
         else:
             if not isinstance(output_dir, Path):
                 output_dir = Path(output_dir)
             self.output_dir = output_dir
+
+        self.parameters = {}
+        self.mock_constraints = {}
+        self.likelihood_params = {}
+        self.normalization = {}
 
     def draw_L(self, Nb_GRBs=None, model='EPL', z=None, run_mode=None, savefig=False, **params):
         """
@@ -79,7 +81,11 @@ class GRBPopulation:
         if Nb_GRBs is None:
             Nb_GRBs = self.Nb_GRBs
 
-        if model == 'EPL':
+        if model == 'Fixed':
+            L = 10**(params['logL0'])*np.ones(Nb_GRBs)
+            logLmin = params['logL0']-0.1
+            logLmax = params['logL0']+0.1
+        elif model == 'EPL':
             logLmin = params['logLmin']
             logLmax = params['logLmax']
             slope = params['slope']
@@ -133,20 +139,47 @@ class GRBPopulation:
                         raise KeyError('Could not find z to use in draw_L')
                     z = self.properties['z']
                 L *= (1 + z)**k_evol
+
+        elif model == 'EBPLS12':
+            logLmin = params['logLmin']
+            logLbreak = params['logLbreak']
+            logLmax = params['logLmax']
+            slopeL = params['slopeL']
+            slopeH = params['slopeH']
+            k_evol = params['k_evol']
+            logL_range = np.linspace(logLmin, logLmax, 1000)
+            if k_evol != 0.0:
+                if z is None:
+                    if 'z' not in self.properties.keys():
+                        raise KeyError('Could not find z to use in draw_L')
+                    z = self.properties['z']
+                logLbreak = params['logLbreak'] + k_evol*np.log10(1. + z)
+                L = np.zeros(Nb_GRBs)
+                for i in range(Nb_GRBs):
+                    logL_pdf_unnormed = ff.BPL_lum(logL_range, logLbreak=logLbreak[i], slopeL=slopeL, slopeH=slopeH)
+                    logL_pdf = logL_pdf_unnormed / logL_pdf_unnormed.sum()
+                    L[i] = 10.**(np.random.choice(logL_range, size=1, p=logL_pdf))
+            else:
+                logL_pdf_unnormed = ff.BPL_lum(logL_range, logLbreak=logLbreak, slopeL=slopeL, slopeH=slopeH)
+                logL_pdf = logL_pdf_unnormed / logL_pdf_unnormed.sum()
+
+                L = 10.**(np.random.choice(logL_range, size=Nb_GRBs, p=logL_pdf))
+
         else:
             raise ValueError("Invalid model for L drawing")
 
         self.properties['L'] = L
 
-        if run_mode == 'debug' and model != 'EPL':
+        if run_mode == 'debug':
             log.info("Debug mode activated; plotting L pdf")
-            delta_logL = logL_range[1]-logL_range[0]
             fig, ax = plt.subplots(figsize=(6, 5), tight_layout=True)
             ax.hist(np.log10(L),
                     bins=np.arange(logLmin, logLmax, 0.1),
                     density=True, color='lightgray',
                     label='Drawings', edgecolor='k', linewidth=0.5)
-            ax.plot(logL_range, logL_pdf/delta_logL, label='PDF')
+            if (model != 'EPL') and (model != 'Fixed'):
+                delta_logL = logL_range[1]-logL_range[0]
+                ax.plot(logL_range, logL_pdf/delta_logL, label='PDF')
             ax.set_xlabel('log(L [erg/s])')
             ax.set_ylabel('L PDF')
             ax.set_yscale('log')
@@ -176,50 +209,57 @@ class GRBPopulation:
         redshift = cosmo['redshift']
         dVdz = cosmo['dVdz']
 
-        if zmax > redshift[-1]:
-            log.warning("In draw_z, zmax is greater than largest value in redshift table")
-        z_range = redshift[redshift <= zmax]
-        comoving_volume = dVdz[redshift <= zmax] / (1. + z_range)
-
-        if model == 'SH':
-            z_pdf_comov = ff.SH(z_range, a=params['a'], b=params['b'], zm=params['zm'])
-        elif model == 'BExp':
-            z_pdf_comov = ff.BExp(z_range, a=params['a'], b=params['b'], zm=params['zm'])
-        elif model == 'BPL':
-            z_pdf_comov = ff.BPL_z(z_range, a=params['a'], b=params['b'], zm=params['zm'])
-        elif model == 'D06':
-            z_pdf_comov = ff.D06(z_range, a=params['a'], b=params['b'], c=params['c'], d=params['d'])
-        elif model == 'qD06':
-            z_pdf_comov = ff.qD06(z_range, SFR=params['SFR'])
-        elif model == 'P16':
-            z_pdf_comov = ff.P16(z_range, gamma_0=0.0204, gamma_1=1.8069, gamma_2=3.1724, gamma_3=7.2690)
-        elif model == 'MD14':
-            z_pdf_comov = ff.MD14(z_range)
+        if model == 'Fixed':  # Not 100% sure this is the correct way to calculate this
+            pseudo_collapse_rate = dVdz[redshift.searchsorted(params['z0'])] / (1. + params['z0'])
+            z = params['z0']*np.ones(Nb_GRBs)
         else:
-            raise NotImplementedError
+            if zmax > redshift[-1]:
+                log.warning("In draw_z, zmax is greater than largest value in redshift table")
+            z_range = redshift[redshift <= zmax]
+            comoving_volume = dVdz[redshift <= zmax] / (1. + z_range)
 
-        pseudo_collapse_rate = integrate.trapz(z_pdf_comov/z_pdf_comov[0] * comoving_volume, z_range)
-        self.normalization['pseudo_collapse_rate'] = pseudo_collapse_rate
-        z_pdf_unnormed = z_pdf_comov * comoving_volume
-        z_pdf = z_pdf_unnormed / z_pdf_unnormed.sum()
-
-        z = np.random.choice(z_range, size=Nb_GRBs, p=z_pdf)
+            if model == 'SH03':
+                z_pdf_comov = ff.SH(z_range, a=params['a'], b=params['b'], zm=params['zm'])
+            elif model == 'BExp':
+                z_pdf_comov = ff.BExp(z_range, a=params['a'], b=params['b'], zm=params['zm'])
+            elif model == 'BPL':
+                z_pdf_comov = ff.BPL_z(z_range, a=params['a'], b=params['b'], zm=params['zm'])
+            elif model == 'D06':
+                z_pdf_comov = ff.D06(z_range, a=params['a'], b=params['b'], c=params['c'], d=params['d'])
+            elif model == 'qD06':
+                z_pdf_comov = ff.qD06(z_range, SFR=params['SFR'], mod=params['mod'])
+            elif model == 'Li08':
+                z_pdf_comov = ff.Li08(z_range, a=params['a'], b=params['b'], c=params['c'], d=params['d'])
+            elif model == 'HB06':
+                z_pdf_comov = ff.HB06(z_range, a=params['a'], b=params['b'], c=params['c'], d=params['d'])
+            elif model == 'MD14':
+                z_pdf_comov = ff.MD14(z_range, a=params['a'], b=params['b'], c=params['c'], d=params['d'])
+            elif model == 'S12':
+                z_pdf_comov = ff.S12(z_range, Zth=params['Zth'], n_dens=params['n_dens'])
+            else:
+                raise NotImplementedError
+            pseudo_collapse_rate = integrate.trapz(z_pdf_comov/z_pdf_comov[0] * comoving_volume, z_range)
+            z_pdf_unnormed = z_pdf_comov * comoving_volume
+            z_pdf = z_pdf_unnormed / z_pdf_unnormed.sum()
+            z = np.random.choice(z_range, size=Nb_GRBs, p=z_pdf)
 
         self.properties['z'] = z
         self.properties['D_L'] = Lum_dist(z, cosmo)
+        self.normalization['pseudo_collapse_rate'] = pseudo_collapse_rate
 
         if run_mode == 'debug':
             log.info("Debug mode activated; plotting z pdf")
             fig, axes = plt.subplots(2, figsize=(6, 7), tight_layout=True)
-            delta_z = z_range[1]-z_range[0]
             axes[0].hist(z, bins=50, density=True, color='lightgray', label='Drawings',
                          edgecolor='k', linewidth=0.5)
-            axes[0].plot(z_range, z_pdf/delta_z, label='PDF')
+            if model != 'Fixed':
+                delta_z = z_range[1]-z_range[0]
+                axes[0].plot(z_range, z_pdf/delta_z, label='PDF')
+                axes[1].plot(z_range, z_pdf_comov, label='comoving rate')
+                axes[1].set_ylabel(r'$\rm[yr^{-1}\,Mpc^{-3}]$')
             axes[0].set_ylabel('z PDF')
             axes[0].set_yscale('log')
             axes[0].legend()
-            axes[1].plot(z_range, z_pdf_comov, label='comoving rate')
-            axes[1].set_ylabel(r'$\rm[yr^{-1}\,Mpc^{-3}]$')
             if model == 'P16':
                 df = pd.read_csv('../catalogs/BAT6_cat/BAT6ext_GRB_formation_rate.txt',
                                  sep='\t', header=1, names=['1+z','GRB rate', 'err'])
@@ -243,8 +283,6 @@ class GRBPopulation:
         if Nb_GRBs is None:
             Nb_GRBs = self.Nb_GRBs
 
-        L0 = 1.6e52  # erg/s
-
         if model == 'Fixed':
             Ep = params["Ep0"]*np.ones(Nb_GRBs)
 
@@ -253,6 +291,7 @@ class GRBPopulation:
             Ep = 10.**t
 
         elif model == 'A':
+            L0 = float(params['L0'])
             t = np.random.normal(0, params["sigmaEp"], Nb_GRBs)
             if L is None:
                 if 'L' not in self.properties.keys():
@@ -279,7 +318,7 @@ class GRBPopulation:
                 self.save_fig(fig, 'Ep_draw.pdf')
         return Ep.copy()
 
-    def draw_spec(self, Nb_GRBs=None, model='FBand', run_mode=None, savefig=False, data_dir=root_dir/'data', **params):
+    def draw_spec(self, Nb_GRBs=None, model='Fixed', run_mode=None, savefig=False, data_dir=root_dir/'data', **params):
         """
             Draw the spectral parameters alpha, beta and ktild
         """
@@ -289,30 +328,36 @@ class GRBPopulation:
         if Nb_GRBs is None:
             Nb_GRBs = self.Nb_GRBs
 
-        if model == 'FBand':
-            _ktild = f90f.f90f.calc_ktild(alpha=params['alpha'], beta=params['beta'])
+        if model == 'Fixed':
+            _ktild = f90f.f90f.calc_ktild(alpha=params['alpha'],
+                                          beta=params['beta'],
+                                          spec=params['shape'])
             ktild = _ktild * np.ones(Nb_GRBs)
             alpha = params['alpha'] * np.ones(Nb_GRBs)
             beta = params['beta'] * np.ones(Nb_GRBs)
 
-        elif (model == 'GBM_Band_old') or (model == 'GBM_Band'):
-            if (model == 'GBM_Band_old'):
+        elif (model == 'GBM_old') or (model == 'GBM'):
+            if (model == 'GBM_old'):
                 alpha_file = 'alpha_GBM.txt'
                 beta_file = 'beta_GBM.txt'
-            elif (model == 'GBM_Band'):
+            elif (model == 'GBM'):
                 alpha_file = 'good_alpha_GBM.txt'
                 beta_file = 'good_beta_GBM.txt'
 
             alpha = st.draw_from_cdf_file(data_dir/alpha_file, N_draws=Nb_GRBs)
             beta = st.draw_from_cdf_file(data_dir/beta_file, N_draws=Nb_GRBs)
 
-            if (model == 'GBM_Band_old'):  # because of wrong convention
+            if (model == 'GBM_old'):  # because of wrong convention
                 alpha = -alpha
                 beta = -beta
                 beta = np.where((beta == 2), 2.01, beta)
 
-            ktild = f90f.f90f.calc_ktild(alpha=alpha, beta=beta)
-
+            ktild = f90f.f90f.calc_ktild(alpha=alpha, beta=beta, spec=params['shape'])
+        elif model == 'D06':
+            alpha = np.random.normal(1, 0.5/np.sqrt(2), Nb_GRBs)
+            alpha = np.where(alpha < 2, alpha, 1.99)
+            beta = st.beta_D06(Nb_GRBs)
+            ktild = f90f.f90f.calc_ktild(alpha=alpha, beta=beta, spec=params['shape'])
         else:
             raise ValueError("Invalid model for spec drawing")
 
@@ -472,7 +517,8 @@ class GRBPopulation:
         # Use the function from physics module to avoid unecessary
         # checks present in the class method
         ph.calc_peak_photon_flux(GRB_prop=self.properties,
-                                 instruments=instruments)
+                                 instruments=instruments,
+                                 shape=params['spectral_shape']['shape'])
 
         return self.properties
 
@@ -511,6 +557,7 @@ class GRBPopulation:
             _instruments = instruments
         ph.calc_peak_photon_flux(GRB_prop=self.properties,
                                  instruments=_instruments,
+                                 shape=self.parameters['spectral_shape']['shape'],
                                  ECLAIRs_prop=ECLAIRs_prop)
         return
 
@@ -523,6 +570,7 @@ class GRBPopulation:
         self._check_properties(necessary_prop, func_name='peak energy flux')
         ph.calc_peak_energy_flux(GRB_prop=self.properties,
                                  instruments=instruments,
+                                 shape=self.parameters['spectral_shape']['shape'],
                                  ECLAIRs_prop=ECLAIRs_prop)
         return
 
@@ -836,4 +884,5 @@ class GRBPopulation:
 
         summary += full_width * thick_line + "\n"
 
+        print(summary)
         return summary

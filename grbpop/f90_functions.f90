@@ -133,25 +133,29 @@ CONTAINS
 
     END SUBROUTINE det_prob_ECLAIRs
 
-    SUBROUTINE calc_ktild(alpha, beta, N, ktild)
+    SUBROUTINE calc_ktild(alpha, beta, spec, N, ktild)
         ! Calculates the normalization factor for the spectral shape for a Band function
         ! Uses the Gamma functions for optimized speed
         INTEGER :: i, N
+        CHARACTER(*) :: spec
         REAL(8), DIMENSION(0:N) :: alpha, beta, ktild, x_c
         REAL(8) :: xBx, Gamma, gln
 
-        !f2py intent(in) :: alpha, beta
+        !f2py intent(in) :: alpha, beta, spec
         !f2py intent(hide), depend(alpha) :: N = shape(alpha, 0)
         !f2py intent(out) :: ktild
-        
-        x_c = (beta - alpha) / (2.d0 - alpha)
-        DO i=0, N
-            xBx = 0.d0
-            CALL GammaSeries(Gamma, 2.d0-alpha(i), beta(i)-alpha(i), gln)
-            xBx = Gamma * EXP(gln) /( (2.d0 - alpha(i))**(2.d0-alpha(i)) ) &             ! integral below x_c
-                & + x_c(i)**(2.d0-alpha(i)) * EXP(alpha(i)-beta(i)) / (beta(i) - 2.d0)  ! analytic integral above x_c
-            ktild(i) = 1.d0/xBx
-        END DO
+        IF (spec == 'Band') THEN
+            x_c = (beta - alpha) / (2.d0 - alpha)
+            DO i=0, N
+                xBx = 0.d0
+                CALL GammaSeries(Gamma, 2.d0-alpha(i), beta(i)-alpha(i), gln)
+                xBx = Gamma * EXP(gln) /( (2.d0 - alpha(i))**(2.d0-alpha(i)) ) &             ! integral below x_c
+                    & + x_c(i)**(2.d0-alpha(i)) * EXP(alpha(i)-beta(i)) / (beta(i) - 2.d0)  ! analytic integral above x_c
+                ktild(i) = 1.d0/xBx
+            END DO
+        ELSE IF (spec == 'BPL') THEN
+            ktild = (2.0-alpha) * (beta-2.0) / (beta-alpha)
+        END IF
 
     END SUBROUTINE calc_ktild
 

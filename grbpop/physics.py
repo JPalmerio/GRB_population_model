@@ -72,7 +72,7 @@ def Btild(x, ktild, alpha, beta, spec='Band'):
         Btild_2 = ktild * x**(-beta) * np.exp(alpha - beta) * x_c**(beta - alpha)
         Btild = np.where((x <= x_c), Btild_1, Btild_2)
     elif spec == 'BPL':
-        ktild = (2.0-alpha) * (beta-2.0) / (beta-alpha)
+        # ktild = (2.0-alpha) * (beta-2.0) / (beta-alpha)
         Btild_1 = ktild * x**(-alpha)
         Btild_2 = ktild * x**(-beta)
         Btild = np.where((x <= 1.0), Btild_1, Btild_2)
@@ -109,7 +109,7 @@ def xBtild(x, ktild, alpha, beta, spec='Band'):
     return Btild
 
 
-def pht_flux(L, z, Ep, D_L, alpha, beta, ktild, Emin, Emax,
+def pht_flux(L, z, Ep, D_L, alpha, beta, ktild, Emin, Emax, spec='Band',
     precision=100, f90=True, **extra_args):
     """
         Returns the photon flux in [ph/cm2/s] between Emin and Emax.
@@ -129,27 +129,27 @@ def pht_flux(L, z, Ep, D_L, alpha, beta, ktild, Emin, Emax,
         xmax = (1.+z)*Emax/Ep
         x = np.logspace(np.log10(xmin), np.log10(xmax), precision, axis=-1)
         if f90:
-            Bs = Btild(x, ktild, alpha, beta)
+            Bs = Btild(x, ktild, alpha, beta, spec=spec)
             B = f90f.f90f.integrate_2d(x=x, y=Bs)
         else:
             B = np.zeros(Nb_GRBs)
             for i in range(Nb_GRBs):
-                B[i] = integrate.trapz(Btild(x[i], ktild[i], alpha[i], beta[i]), x[i], axis=0)
+                B[i] = integrate.trapz(Btild(x[i], ktild[i], alpha[i], beta[i], spec=spec), x[i], axis=0)
         pht_flux = B * (1.+z) * L/(4.*np.pi*Ep*cst.keV*(D_L*cst.Mpc)**2)  # in cgs (ph/cm2/s)
     else:
         xmin = (1.+z)*Emin/Ep
         xmax = (1.+z)*Emax/Ep
         x = np.logspace(np.log10(xmin), np.log10(xmax), precision)
         if f90:
-            B = f90f.f90f.integrate_1d(x=x, y=Btild(x, ktild, alpha, beta))
+            B = f90f.f90f.integrate_1d(x=x, y=Btild(x, ktild, alpha, beta, spec=spec))
         else:
-            B = integrate.trapz(Btild(x, ktild, alpha, beta), x, axis=0)
+            B = integrate.trapz(Btild(x, ktild, alpha, beta, spec=spec), x, axis=0)
         pht_flux = B * (1.+z) * L/(4.*np.pi*Ep*cst.keV*(D_L*cst.Mpc)**2)  # in cgs (ph/cm2/s)
 
     return pht_flux
 
 
-def erg_flux(L, z, Ep, D_L, alpha, beta, ktild, Emin, Emax,
+def erg_flux(L, z, Ep, D_L, alpha, beta, ktild, Emin, Emax, spec='Band',
     precision=100, f90=True, **extra_args):
     """
         Returns the energy flux in [erg/cm2/s] between Emin and Emax.
@@ -169,28 +169,28 @@ def erg_flux(L, z, Ep, D_L, alpha, beta, ktild, Emin, Emax,
         xmax = (1.+z)*Emax/Ep
         x = np.logspace(np.log10(xmin), np.log10(xmax), precision, axis=-1)
         if f90:
-            xBs = xBtild(x, ktild, alpha, beta)
+            xBs = xBtild(x, ktild, alpha, beta, spec=spec)
             xB = f90f.f90f.integrate_2d(x=x, y=xBs)
         else:
             xB = np.zeros(Nb_GRBs)
             for i in range(Nb_GRBs):
-                xB[i] = integrate.trapz(xBtild(x[i], ktild[i], alpha[i], beta[i]), x[i], axis=0)
+                xB[i] = integrate.trapz(xBtild(x[i], ktild[i], alpha[i], beta[i], spec=spec), x[i], axis=0)
         erg_flux = xB * L/(4.*np.pi*(D_L*cst.Mpc)**2)  # in cgs (erg/cm2/s)
     else:
         xmin = (1.+z)*Emin/Ep
         xmax = (1.+z)*Emax/Ep
         x = np.logspace(np.log10(xmin), np.log10(xmax), precision)
         if f90:
-            xB = f90f.f90f.integrate_1d(x=x, y=xBtild(x, ktild, alpha, beta))
+            xB = f90f.f90f.integrate_1d(x=x, y=xBtild(x, ktild, alpha, beta, spec=spec))
         else:
-            xB = integrate.trapz(xBtild(x, ktild, alpha, beta), x, axis=0)
+            xB = integrate.trapz(xBtild(x, ktild, alpha, beta, spec=spec), x, axis=0)
         erg_flux = xB * L/(4.*np.pi*(D_L*cst.Mpc)**2)  # in cgs (erg/cm2/s)
 
     return erg_flux
 
 
 def cts_flux_ECLAIRs(L, z, Ep, D_L, alpha, beta, ktild, Emin, Emax, eff_area_A_tot, eff_area_E_tot,
-    precision=100, f90=True, **extra_args):
+    spec='Band', precision=100, f90=True, **extra_args):
     """
         Calculate the number of counts per second per square centimeter
         [cts/cm2/s] between Emin and Emax.
@@ -219,12 +219,12 @@ def cts_flux_ECLAIRs(L, z, Ep, D_L, alpha, beta, ktild, Emin, Emax, eff_area_A_t
         E_grid = x * Ep[:, np.newaxis]/(1+z[:, np.newaxis])
         eff_A = eff_area_A_tot[eff_area_E_tot.searchsorted(E_grid)]
         if f90:
-            Bs = Btild(x, ktild, alpha, beta)
+            Bs = Btild(x, ktild, alpha, beta, spec=spec)
             B = f90f.f90f.integrate_2d_w(x=x, y=Bs, w=eff_A)
         else:
             B = np.zeros(Nb_GRBs)
             for i in range(Nb_GRBs):
-                B[i] = integrate.trapz(eff_A[i]*Btild(x[i], ktild[i], alpha[i], beta[i]), x[i], axis=0)
+                B[i] = integrate.trapz(eff_A[i]*Btild(x[i], ktild[i], alpha[i], beta[i], spec=spec), x[i], axis=0)
         cts_flux_ECLAIRs = B * (1.+z) * L/(4.*np.pi*Ep*cst.keV*(D_L*cst.Mpc)**2)  # in cgs (cts/cm2/s)
     else:
         xmin = (1.+z)*Emin/Ep
@@ -233,16 +233,16 @@ def cts_flux_ECLAIRs(L, z, Ep, D_L, alpha, beta, ktild, Emin, Emax, eff_area_A_t
         E_grid = x * Ep / (1.+z)
         eff_A = eff_area_A_tot[eff_area_E_tot.searchsorted(E_grid)]
         if f90:
-            B = f90f.f90f.integrate_1d(x=x, y=eff_A*Btild(x, ktild, alpha, beta))
+            B = f90f.f90f.integrate_1d(x=x, y=eff_A*Btild(x, ktild, alpha, beta, spec=spec))
         else:
-            B = integrate.trapz(eff_A*Btild(x, ktild, alpha, beta), x, axis=0)
+            B = integrate.trapz(eff_A*Btild(x, ktild, alpha, beta, spec=spec), x, axis=0)
         cts_flux_ECLAIRs = B * (1.+z) * L/(4.*np.pi*Ep*cst.keV*(D_L*cst.Mpc)**2)  # in cgs (cts/cm2/s)
 
     return cts_flux_ECLAIRs
 
 
 def erg_flux_ECLAIRs(L, z, Ep, D_L, alpha, beta, ktild, Emin, Emax, eff_area_A_tot, eff_area_E_tot,
-    precision=100, f90=True, **extra_args):
+    spec='Band', precision=100, f90=True, **extra_args):
     """
         Calculate the amount of energy per second per square centimeter
         [erg/cm2/s] between Emin and Emax.
@@ -271,12 +271,12 @@ def erg_flux_ECLAIRs(L, z, Ep, D_L, alpha, beta, ktild, Emin, Emax, eff_area_A_t
         E_grid = x * Ep[:, np.newaxis]/(1+z[:, np.newaxis])
         eff_A = eff_area_A_tot[eff_area_E_tot.searchsorted(E_grid)]
         if f90:
-            xBs = xBtild(x, ktild, alpha, beta)
+            xBs = xBtild(x, ktild, alpha, beta, spec=spec)
             xB = f90f.f90f.integrate_2d_w(x=x, y=xBs, w=eff_A)
         else:
             xB = np.zeros(Nb_GRBs)
             for i in range(Nb_GRBs):
-                xB[i] = integrate.trapz(xBtild(x[i], ktild[i], alpha[i], beta[i]), x[i], axis=0)
+                xB[i] = integrate.trapz(xBtild(x[i], ktild[i], alpha[i], beta[i], spec=spec), x[i], axis=0)
         erg_flux_ECLAIRs = xB * L/(4.*np.pi*(D_L*cst.Mpc)**2)  # in cgs (erg/cm2/s)
     else:
         xmin = (1.+z)*Emin/Ep
@@ -285,15 +285,15 @@ def erg_flux_ECLAIRs(L, z, Ep, D_L, alpha, beta, ktild, Emin, Emax, eff_area_A_t
         E_grid = x * Ep / (1.+z)
         eff_A = eff_area_A_tot[eff_area_E_tot.searchsorted(E_grid)]
         if f90:
-            xB = f90f.f90f.integrate_1d(x=x, y=eff_A*xBtild(x, ktild, alpha, beta))
+            xB = f90f.f90f.integrate_1d(x=x, y=eff_A*xBtild(x, ktild, alpha, beta, spec=spec))
         else:
-            xB = integrate.trapz(eff_A*xBtild(x, ktild, alpha, beta), x, axis=0)
+            xB = integrate.trapz(eff_A*xBtild(x, ktild, alpha, beta, spec=spec), x, axis=0)
         erg_flux_ECLAIRs = xB * L/(4.*np.pi*(D_L*cst.Mpc)**2)  # in cgs (erg/cm2/s)
 
     return erg_flux_ECLAIRs
 
 
-def calc_peak_photon_flux(GRB_prop, instruments, ECLAIRs_prop=None, f90=True):
+def calc_peak_photon_flux(GRB_prop, instruments, shape='Band', ECLAIRs_prop=None, f90=True):
     """
         Calculates peak photon flux in units of ph/cm2/s (assumed to be
         over a 1s time interval)
@@ -311,20 +311,25 @@ def calc_peak_photon_flux(GRB_prop, instruments, ECLAIRs_prop=None, f90=True):
                 raise ValueError('If you wish to calculate counts for ECLAIRs you must provide the'
                                  ' ECLAIRs_prop dictionary with the relevent information')
             GRB_prop['_'.join(['pht_cts', name])] = cts_flux_ECLAIRs(**GRB_prop,
+                                                                     spec=shape,
                                                                      Emin=ECLAIRs_prop['Emin'],
                                                                      Emax=ECLAIRs_prop['Emax'],
                                                                      eff_area_A_tot=ECLAIRs_prop['eff_area_A'],
                                                                      eff_area_E_tot=ECLAIRs_prop['eff_area_E'],
                                                                      f90=f90)
         else:
-            GRB_prop['_'.join(['pht_pflx', name])] = pht_flux(**GRB_prop, Emin=Emin, Emax=Emax, f90=f90)
+            GRB_prop['_'.join(['pht_pflx', name])] = pht_flux(**GRB_prop,
+                                                              Emin=Emin,
+                                                              Emax=Emax,
+                                                              spec=shape,
+                                                              f90=f90)
         t2 = time.time()
         log.debug(f"Done in {t2-t1:.3f} s")
 
     return
 
 
-def calc_peak_energy_flux(GRB_prop, instruments, ECLAIRs_prop=None, f90=True):
+def calc_peak_energy_flux(GRB_prop, instruments, shape='Band', ECLAIRs_prop=None, f90=True):
     """
         Calculates peak energy flux in units of erg/cm2/s (assumed to be
         over a 1s time interval)
@@ -342,13 +347,18 @@ def calc_peak_energy_flux(GRB_prop, instruments, ECLAIRs_prop=None, f90=True):
                 raise ValueError('If you wish to calculate counts for ECLAIRs you must provide the'
                                  ' ECLAIRs_prop dictionary with the relevent information')
             GRB_prop['_'.join(['erg_cts', name])] = erg_flux_ECLAIRs(**GRB_prop,
+                                                                     spec=shape,
                                                                      Emin=ECLAIRs_prop['Emin'],
                                                                      Emax=ECLAIRs_prop['Emax'],
                                                                      eff_area_A_tot=ECLAIRs_prop['eff_area_A'],
                                                                      eff_area_E_tot=ECLAIRs_prop['eff_area_E'],
                                                                      f90=f90)
         else:
-            GRB_prop['_'.join(['erg_pflx', name])] = erg_flux(**GRB_prop, Emin=Emin, Emax=Emax, f90=f90)
+            GRB_prop['_'.join(['erg_pflx', name])] = erg_flux(**GRB_prop,
+                                                              Emin=Emin,
+                                                              Emax=Emax,
+                                                              spec=shape,
+                                                              f90=f90)
         t2 = time.time()
         log.debug(f"Done in {t2-t1:.3f} s")
 

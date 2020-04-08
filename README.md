@@ -388,3 +388,67 @@ Alternatively, you can provide your own normalization by replacing the following
 # Replace with:
 gp.normalize_from(nGRB0=1.3e-9, nGRB0_err=0.4e-9) # Units: GRB/yr/Mpc3
 ```
+
+## Documentation of distributions
+Below are examples of the parameters to include in the `init/parameters.yml` file for each possible distribution
+
+### Redshift distribution
+For a fixed value use:
+```
+redshift_distribution:
+    model: 'Fixed'
+    z0: 2.
+```
+For a functional form from [Springel & Hernquist 2003, Eq. 14](https://ui.adsabs.harvard.edu/abs/2003MNRAS.339..312S/abstract):
+```
+redshift_distribution:
+    model: 'SH03'
+    zmax: 20
+    zm: 2.
+    a: 2.37
+    b: 1.8
+```
+For a functional form from [Madau & Dickinson 2014, Eq. 15](https://ui.adsabs.harvard.edu/abs/2014ARA%26A..52..415M/abstract)
+```
+redshift_distribution:
+    model: 'MD14'
+    zmax: 20
+    a: 0.015  # optional
+    b: 2.7
+    c: 2.9
+    d: 5.6
+```
+For a functional form from Hopkins & Beacom 2006 (values are from [Kistler+08, Fig.1](https://iopscience.iop.org/article/10.1086/527671/pdf))
+```
+redshift_distribution:
+    model: 'HB06'
+    zmax: 20
+    z1: 0.97  # 1st break
+    z2: 4.48  # 2nd break
+    a: 3.44   # low-z slope
+    b:-0.26   # mid-z slope
+    c:-7.8    # high-z slope
+```
+For a broken power law form:
+```
+redshift_distribution:
+    model: 'BPL'
+    zmax: 20
+    zm: 3.11   # break
+    a: 2.07
+    b: 1.37
+```
+For a broken exponential form:
+```
+redshift_distribution:
+    model: 'BExp'
+    zmax: 20
+    zm: 1.9    # break
+    a: 1.1
+    b: -0.57
+```
+
+### Luminosity Function
+
+
+

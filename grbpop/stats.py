@@ -64,6 +64,13 @@ def chi2(mod, obs, err):
     return np.sum((np.abs(mod-obs)/err)**2)
 
 
+def beta_D06(Nb_GRBs):
+    t = np.random.rand(Nb_GRBs)
+    beta = np.where(t <= 0.15625, 2+np.sqrt(t/2.5), (9-np.sqrt(13.5*(1-t)))/2.5)
+    beta = np.where(beta > 2, beta, 2.01)
+    return beta
+
+
 def unbinned_empirical_cdf(data, weights=None):
     """
         From the answer of Dave at http://stackoverflow.com/questions/3209362/how-to-plot-empirical-cdf-in-matplotlib-in-python

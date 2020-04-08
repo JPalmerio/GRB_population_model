@@ -15,7 +15,8 @@ redshift_distribution:
     zeta:
 
 spectral_shape:
-    model: 'GBM_Band'  # GBM_Band, GBM_Band_old: no args, FBand: Fixed Band, alpha and beta args
+    model: 'GBM'  # GBM, GBM_old, D06: shape arg, Fixed: alpha and beta args
+    shape: 'Band'
     alpha: 0.6
     beta: 2.5
 
@@ -24,6 +25,7 @@ peak_energy_distribution:
     Ep0: 631 # keV
     sigmaEp: 0.44
     alpha_amati: 0.26
+    L0: 1.6e52  # erg/s
 
 t90obs_distribution:
     mu: 1.45

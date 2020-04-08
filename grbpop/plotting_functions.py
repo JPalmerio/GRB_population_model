@@ -96,6 +96,8 @@ def plot_spectral_constraint(ax, pop=None, plot_obs=True, **kwargs):
                         y_mod_plottable+y_mod_err_plottable,
                         y_mod_plottable-y_mod_err_plottable,
                         alpha=0.6, color=plt.getp(art,'color'), zorder=plt.getp(art,'zorder'))
+    ax.set_ylim(0)
+    ax.set_xlim(1,4)
     ax.set_xlabel(r'log Peak Energy $\rm{[keV]}$')
     ax.set_ylabel(r'Number density')
 
@@ -137,7 +139,7 @@ def plot_redshift_constraint(ax, pop=None, plot_obs=True, **kwargs):
                         y_mod_plottable+y_mod_err_plottable,
                         y_mod_plottable-y_mod_err_plottable,
                         alpha=0.6, color=plt.getp(art,'color'), zorder=plt.getp(art,'zorder'))
-    ax.set_ylim(0)
+    ax.set_ylim(ymin=0)
     ax.set_xlim(0,6)
     ax.set_xlabel('Redshift(z)')
     ax.set_ylabel(r'Number density')
@@ -210,7 +212,7 @@ def plot_SHOALS_distr(pop, key, SHOALS_file=None, cumul=False, ax=None, plot_obs
         x_mod, cdf_mod = st.unbinned_empirical_cdf(mod)
         ax.plot(x_mod, cdf_mod, color=mod_color, drawstyle='steps-post', label=mod_label, **kwargs)
 
-        ax.legend()
+        ax.legend(loc='lower right')
         ax.set_ylabel('CDF')
         ax.set_ylim(0,1)
     else:
@@ -489,6 +491,70 @@ def plot_obs_property(fname, key, func=None, func_args={}, ax=None, log=False, k
     if kde:
         sns.kdeplot(df_prop.dropna(), ax=ax, color='k', linewidth=2, label='KDE')
     return df_prop
+
+
+def plot_logNlogP(fname, key, func=None, func_args={}, bins=None, sep=None, hdr=None, density=False,
+                  cols=None, ax=None, eff=False, errors='raise', y_log=False, bins_log=True, factor=None,
+                  Stern_first_bin_corr=False, cat_duration=False, **kwargs):
+    """
+        Plot the logN logP diagram for a given catalog
+    """
+
+    # Read data
+    df_obs = pd.read_csv(fname, sep=sep, header=hdr, names=cols, low_memory=False)
+    # Strip the colum names to remove whitespaces
+    df_obs.rename(columns=lambda x:x.strip(), inplace=True)
+    print("Freshly read N_data: {}".format(len(df_obs.index)))
+    if cat_duration:
+        msc.calc_cat_duration(fname, verbose=True)
+    # Apply function to the data
+    if func is None:
+        df_prop = pd.to_numeric(df_obs[key], errors=errors)
+    # If func is a list, iterate through the list and apply each function
+    elif isinstance(func, list):
+        if not isinstance(func_args, list):
+            raise ValueError
+        df_prop = df_obs.copy()
+        for i, func_i in enumerate(func):
+            df_prop = func_i(df_prop, **func_args[i])
+        df_prop = pd.to_numeric(df_prop[key], errors=errors)
+    else:
+        df_prop = func(df_obs.copy(), **func_args)
+        df_prop = pd.to_numeric(df_prop[key], errors=errors)
+
+    print("After filtering, N_data (excluding NaNs): {}".format(df_prop.count()))
+    if y_log:
+        df_prop = np.log10(df_prop)
+
+    if bins is None:
+        bins, _u, _u = io.read_logRlogN()
+    x, x_errp, x_errm = xerr_from_bins(bins, logscale=bins_log)
+
+    if ax is None:
+        fig, ax = plt.subplots(figsize=(10,8))
+    hist, bins = np.histogram(df_prop, bins=bins)
+    hist_err = np.sqrt(hist)
+
+    if eff:
+        hist = hist / msc.efficiency_correction_Stern(x)
+        hist_err = hist_err / msc.efficiency_correction_Stern(x)
+    if density:
+        N_tot = np.sum(hist)
+    else:
+        N_tot = 1
+    delta_bins = np.log10(bins[1:]/bins[:-1])
+    hist = hist/(N_tot*delta_bins)
+    hist_err = hist_err/(N_tot*delta_bins)
+
+    if factor is not None:
+        hist = hist/factor
+        hist_err = hist_err/factor
+    if Stern_first_bin_corr:
+        hist[0], hist_err[0], _ = msc.log_to_lin(3.069180, 9.691000e-02)
+    ax.errorbar(x, hist, xerr=[x_errm, x_errp], yerr=hist_err,
+                fmt='none', **kwargs)
+
+    return hist, hist_err
 
 
 def plot_eBAT6_EpL(fname=None, axes=None, fname_lim=None, mini_cax=False, kde=False):

@@ -89,6 +89,20 @@ def filter_df(df, filtering_key, lim_min=None, lim_max=None, equal=None,
     return df_out
 
 
+def calc_cat_duration(fname, verbose=False):
+    from datetime import datetime
+    data = pd.read_csv(fname, sep='|', header=2, low_memory=False)
+    data.rename(columns=lambda x:x.strip(), inplace=True)
+    first_date = datetime.strptime(data['name'].min().strip('GRB')[:-3], '%y%m%d')
+    last_date = datetime.strptime(data['name'].max().strip('GRB')[:-3], '%y%m%d')
+    delta_t = (last_date - first_date).days/364.25
+    if verbose:
+        print('First GRB detected on {}'.format(first_date))
+        print('Last GRB detected on {}'.format(last_date))
+        print('Duration: {:.3f} years'.format(delta_t))
+    return delta_t
+
+
 def create_filtered_sample(fname, keys, func=None, func_args={}, ax=None, log=False, kde=True,
     header=2, verbose=False, debug=False, errors='raise', **kwargs):
     """
