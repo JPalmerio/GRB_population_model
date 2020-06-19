@@ -27,7 +27,9 @@ io.create_output_dir(paths_to_dir=paths_to_dir, dir_name=config['output_dir'], o
 # If you want to make predictions for ECLAIRs you need the ECLAIRs properties
 ECLAIRs_prop = None
 # ECLAIRs_prop = init_ECLAIRs(ECLAIRs_dir=paths_to_dir['ECLAIRs'],
-#                             ECLAIRs_config=instruments['ECLAIRs'])
+#                             Emin=instruments['ECLAIRs']['Emin'],
+#                             Emax=instruments['ECLAIRs']['Emax'],
+#                             n_sigma=instruments['ECLAIRs']['n_sigma'])
 # samples['ECLAIRs']['pflx_min'] = ECLAIRs_prop['bkg_total']
 # You must do this before calling io.create_config
 

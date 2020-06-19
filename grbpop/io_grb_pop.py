@@ -11,13 +11,14 @@ log = logging.getLogger(__name__)
 root_dir = Path(__file__).resolve().parents[1]
 
 
-def load_GRBPopulation_from(fname):
+def load_GRBPopulation_from(fname, verbose=True):
     """
         Load a population from a pickle file
     """
     with open(fname, 'rb') as f:
         GRB_pop = pickle.load(f)
-    log.debug(GRB_pop.summary())
+    if verbose:
+        GRB_pop.summary()
     return GRB_pop
 
 
@@ -117,20 +118,27 @@ def create_config(config, samples, instruments, obs_constraints, obs_dir=None):
         all possible choices, and the specific ones to be used are
         specified by the user in the config file.
     """
+    for cstr in config['constraints']:
+        if cstr not in config['samples']:
+            log.warning(f"You asked for {cstr} constraint but did not include it "
+                        "in your samples. I'm assuming it's a mistake and adding it.")
+            config['samples'].append(cstr)
     incl_samples = included_samples(config['samples'], samples)
-    incl_instruments = included_instruments(incl_samples, instruments)
+    instrument_names = get_instrument_names(config['samples'], samples)
+    incl_instruments = included_instruments(instrument_names, instruments)
     incl_constraints = included_constraints(config['constraints'], obs_constraints)
     incl_constraints = load_observational_constraints(incl_constraints, obs_dir=obs_dir)
     return incl_samples, incl_instruments, incl_constraints
 
 
-def included_samples(config_samples, samples):
+def included_samples(sample_names, samples):
     """
-        Create the list of the sample names which will be used by the
-        code.
+        Create a dictionary of the samples which will be used by the
+        code out of all possible samples.
+        sample_names is expected to be a list of sample names.
     """
     try:
-        incl_samples = {sample_name: samples[sample_name] for sample_name in config_samples}
+        incl_samples = {name: samples[name] for name in sample_names}
     except KeyError as e:
         raise ValueError(f"Sample {e} does not exist. Possible samples are {list(samples.keys())}")
 
@@ -140,15 +148,16 @@ def included_samples(config_samples, samples):
     return incl_samples
 
 
-def included_constraints(config_constr, constraints):
+def included_constraints(incl_constraints, constraints):
     """
         Create the list of the instruments which will be needed by the
         code, given the samples required by the user.
+        incl_constraints is expected to be a list of constaint names.
     """
     try:
-        incl_constraints = {constr_name: constraints[constr_name] for constr_name in config_constr}
+        incl_constraints = {name: constraints[name] for name in incl_constraints}
     except KeyError as e:
-        raise ValueError(f"Constraint {e} does not exist."
+        raise ValueError(f"Constraint {e} does not exist. "
                          f"Possible choices are {list(constraints.keys())}")
 
     log.info(f"Including constraints: {list(incl_constraints.keys())}")
@@ -157,18 +166,29 @@ def included_constraints(config_constr, constraints):
     return incl_constraints
 
 
-def included_instruments(incl_samples, instruments):
+def included_instruments(instrument_names, instruments):
     """
-        Create the list of the instruments which will be needed by the
-        code, given the samples required by the user.
+        Create a dictionary of the instruments which will be needed by
+        the code.
+        instrument_names is expected to be a list of instrument names
     """
-    incl_instruments = {incl_samples[s]['instrument']: instruments[incl_samples[s]['instrument']]
-                        for s in incl_samples}
+    incl_instruments = {name: instruments[name] for name in instrument_names}
 
     log.info(f"Including instruments: {list(incl_instruments.keys())}")
     log.debug("Including instruments:\n" + str(yaml.dump(incl_instruments, indent=4)))
 
     return incl_instruments
+
+
+def get_instrument_names(sample_names, samples):
+    """
+        Get the instrument name associated with a list of
+        sample names.
+        Returns a list of instrument names
+    """
+    instrument_names = [samples[name]['instrument'] for name in sample_names]
+
+    return instrument_names
 
 
 def load_observational_constraints(obs_constraints, obs_dir=None):

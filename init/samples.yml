@@ -29,8 +29,8 @@ HETE2_FRE:
 HETE2_WXM:
   instrument: 'WXM'
   pflx_min: 1.0 # ph/s/cm2 in 2-10 keV
-HETE2_WXM_large:
-  instrument: 'WXM_large'
+HETE2_WXML:
+  instrument: 'WXML'
   pflx_min: 1.0 # ph/s/cm2 in 2-30 keV
 SHOALS:
   instrument: 'BAT'
@@ -41,7 +41,16 @@ BATSE_5B_sample:
 GBM_sample:
   instrument: 'GBM'
   pflx_min: 3.0 # ph/s/cm2 in 10-1000 keV
-
-
-
+THESEUS:
+  instrument: 'THESEUS'
+  pflx_min: 0.01 # ph/s/cm2 in 2-30 keV
+ECLAIRsS:
+  instrument: 'ECLAIRsS'
+  pflx_min: 0.01 # ph/s/cm2 in 4-120 keV
+BAT2:
+  instrument: 'BAT2'
+  pflx_min: 0.01 # ph/s/cm2 in 25-50 keV
+BAT3:
+  instrument: 'BAT3'
+  pflx_min: 0.01 # ph/s/cm2 in 50-100 keV
 

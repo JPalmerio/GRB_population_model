@@ -24,6 +24,7 @@ peak_energy_distribution:
     Ep0: 690 # keV
     sigmaEp: 0.45
     alpha_amati: 0.3 # this parameter is ignored in the A case
+    L0: 1.6e52  # erg/s
 
 t90obs_distribution:
     mu: 1.45

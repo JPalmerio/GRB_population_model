@@ -137,6 +137,10 @@ def subsample_and_KS(df1, df2, N_sub, key, confidence=95.0, N_bs=100, precision=
 
     if create_CDF:
         t1 = time.time()
+        if bins is None:
+            bins = np.linspace(np.min([subsamp1.min(),subsamp2.min()]),
+                               np.max([subsamp2.max(),subsamp2.max()]),
+                               precision)
         CDF1 = CDF_with_bootstrap(subsamp1, bins=bins)
         CDF2 = CDF_with_bootstrap(subsamp2, bins=bins)
         med1, lw1, up1 = compute_CDF_quantiles(CDF1, confidence=confidence)
@@ -172,7 +176,7 @@ def subsample_with_bootstrap(df, key, N_sub, N_bs=100):
     return subsamples
 
 
-def CDF_with_bootstrap(subsamples, bins):
+def CDF_with_bootstrap(subsamples, bins, weights=None):
     """
         Takes in a subsample array of size (N_bs, N_sub) and computes the CDF for each bootstrap realization
         The CDFs are sampled given a certain precision determined from the bins.
@@ -184,7 +188,7 @@ def CDF_with_bootstrap(subsamples, bins):
     # Compute the CDF for each subsample realization
     CDF_real = np.zeros((N_bs, precision))
     for i in range(N_bs):
-        hist, bins_ = np.histogram(subsamples[i], bins=bins)
+        hist, bins_ = np.histogram(subsamples[i], bins=bins, weighs=weights)
         CDF_real[i,:] = np.cumsum(hist).astype(float)/float(np.sum(hist))
 
     return CDF_real
@@ -198,19 +202,14 @@ def compute_CDF_quantiles(CDFs, confidence=95.0):
         Returns the median, lower and upper bounds at the desired confidence level.
     """
 
-    N_bins = CDFs.shape[1]
     # Create percentiles:
     lower_percentile = (1. - confidence/100.)/2.
     upper_percentile = 1. - lower_percentile
     # Compute the percentiles for each bin
-    lower = np.zeros(N_bins)
-    median = np.zeros(N_bins)
-    upper = np.zeros(N_bins)
-    for i in range(N_bins):
-        q = mstats.mquantiles(CDFs[:,i], prob=[lower_percentile, 0.5, upper_percentile])
-        median[i] = q[1]
-        upper[i] = q[2]
-        lower[i] = q[0]
+    q = mstats.mquantiles(CDFs.T, prob=[lower_percentile, 0.5, upper_percentile], axis=1)
+    lower = q.T[0]
+    median = q.T[1]
+    upper = q.T[2]
     return median, lower, upper
 
 
@@ -276,7 +275,8 @@ def compute_CDF_bounds_by_MC(sample, sample_errp, sample_errm=None, sample_ll=No
 
         weqs : [bool]
             Default is False.
-            If True, the weights are assumed equal to the sample and are not redrawn?
+            If True, the weights are assumed equal to the sample and are not redrawn.
+            Use this if you are weighting the sample by itself.
 
         confidence : [float]
             Default is 95.0
@@ -285,11 +285,14 @@ def compute_CDF_bounds_by_MC(sample, sample_errp, sample_errm=None, sample_ll=No
         bins : [numpy array]
             Default is None
             Bins in which to compute the cumulative distribution function.
-            If None, will use the conservative assumption that the smallest bin value is the min value of the sample minus 5 time the maximum error of the sample (opposite for biggest bin value).
+            If None, will use the conservative assumption that the smallest bin value is
+            the min value of the sample minus 5 time the maximum error of the sample
+            (max value plus 5 times max error for largest bin value).
+            Use 'precision' argument to controle the number of bins in this case.
 
         positive : [bool]
             Default is False
-            Set to True if the quantity can not be negative (a distance for example), will reject negative drawings.
+            Set to True if the quantity can not be negative (a distance for example).
 
         bootstrap : [bool]
             Default is False
@@ -298,12 +301,14 @@ def compute_CDF_bounds_by_MC(sample, sample_errp, sample_errm=None, sample_ll=No
         ll_max_val : [numpy array]
             Default is None
             Numpy array of the minimum value to use as a lower bound for the prior on lower limits.
-            If lower limits are provided (with sample_ll) but ll_max_val is not specified, by default will use the maximum value of the sample plus 5 times the largest error
+            If lower limits are provided (with sample_ll) but ll_max_val is not specified,
+            by default will use the maximum value of the sample plus 5 times the largest error
 
         ul_min_val : [numpy array]
             Default is None
             Numpy array of the maximum value to use as an upper bound for the prior on upper limits.
-            If upper limits are provided (with sample_ul) but ul_min_val is not specified, by default will use the minimum value of the sample minus 5 times the largest error
+            If upper limits are provided (with sample_ul) but ul_min_val is not specified,
+            by default will use the minimum value of the sample minus 5 times the largest error
 
         precision : [int]
             Default is 1000
@@ -311,7 +316,7 @@ def compute_CDF_bounds_by_MC(sample, sample_errp, sample_errm=None, sample_ll=No
 
         precision_pdf : [int]
             Default is 1000
-            Numbers of points on which to sample the probability distribution function of each data point.
+            Numbers of points with which to sample the probability distribution function of each data point.
 
         N_MC : [int]
             Default is 1000
@@ -413,7 +418,7 @@ def compute_CDF_bounds_by_MC(sample, sample_errp, sample_errm=None, sample_ll=No
     # This is essentially used for plotting purposes
     bins_mid = 0.5*(bins[1:]+bins[:-1])
 
-    # Create a array where each line is one realization of MC drawings for each galaxy
+    # Create a array where each line is one MC realization drawings of the sample
     sample_real = np.zeros((N_MC,sample_len))
 
     # Create array for the weights
@@ -457,7 +462,7 @@ def compute_CDF_bounds_by_MC(sample, sample_errp, sample_errm=None, sample_ll=No
     # - If there are weights with errors, generate N_MC realizations of the weight value following same procedure as above
     if weqs:
         weights_real = sample_real.copy()
-    elif weights_err is not None and weights is not None:
+    elif (weights_err is not None) and (weights is not None):
         for i in range(sample_len):
             weights_real[:,i] = asym_gaussian_draw(weights[i],
                                                    sigma1=weights_errm[i],
@@ -467,6 +472,8 @@ def compute_CDF_bounds_by_MC(sample, sample_errp, sample_errm=None, sample_ll=No
 
     # Visualize the PDFs of each individual point in the sample
     if show_plot and (ax is None):
+        if verbose:
+            log.info("In compute_CDF_bounds_by_MC: starting drawings of individual point PDFs for plotting...")
         for i in range(sample_len):
             if (sample_ll[i] == 0) & (sample_ul[i] == 0):
                 x, sample_pdf[:,i] = asym_gaussian_pdf(sample[i],
@@ -525,8 +532,8 @@ def compute_CDF_bounds_by_MC(sample, sample_errp, sample_errm=None, sample_ll=No
     CDF_real = np.zeros((N_MC,precision))
     PDF_real = np.zeros((N_MC,precision))
     for i in range(N_MC):
-        hist, bins_ = np.histogram(sample_bootstrapped[i], bins=bins, weights=weights_bootstrapped[i])
-        PDF_real[i,:] = hist/float(np.sum(hist)*(bins_[1]-bins_[0]))
+        hist, _bins = np.histogram(sample_bootstrapped[i], bins=bins, weights=weights_bootstrapped[i])
+        PDF_real[i,:] = hist/float(np.sum(hist)*(_bins[1]-_bins[0]))
         CDF_real[i,:] = np.cumsum(hist).astype(float)/float(np.sum(hist))
 
     # Compute the percentiles for each bin
@@ -623,20 +630,20 @@ def asym_gaussian_draw(mu, sigma1, sigma2, nb_draws=1000, precision=500, positiv
     Returns an array of the drawings
     """
 
-    if sigma1 == 0. and sigma2 == 0.:
+    if sigma1 == 0 and sigma2 == 0:
         return mu * np.ones(nb_draws)
 
-    if sigma1 < 0. or sigma2 < 0.:
+    if sigma1 < 0 or sigma2 < 0:
         raise ValueError('sigma1 or sigma2 can not be negative, check your input.')
 
-    if sigma1 == 0.:
+    if sigma1 == 0:
         if mu == 0:
             sigma1 = 1e-9
             log.warning('In asym_gaussian_draw: sigma1 and mu are equal to zero, replacing sigma1 by 1e9')
         else:
             sigma1 = 1e-9 * mu
             log.warning('In asym_gaussian_draw: sigma1 is equal to zero, replacing sigma1 by mu * 1e9')
-    if sigma2 == 0.:
+    if sigma2 == 0:
         if mu == 0:
             sigma2 = 1e-9
             log.warning('In asym_gaussian_draw: sigma2 and mu are equal to zero, replacing sigma2 by 1e9')

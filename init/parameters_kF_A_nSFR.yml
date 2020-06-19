@@ -2,9 +2,9 @@ luminosity_function:
     model: 'ES'  # ES: Evolv. Schechter, EPL: Evolv. Power Law
     logLmin: 49.6989700043  # log(erg/s)
     logLmax: 53.0  # log(erg/s)
-    logLbreak: 52.47    # log(erg/s)
+    logLbreak: 52.5    # log(erg/s)
     slope: 1.53
-    k_evol: 2.08  # k_evol >= 0
+    k_evol: 2.1  # k_evol >= 0
 
 redshift_distribution:
     model: 'BExp'  # BExp: Broken Exponential
@@ -24,7 +24,7 @@ peak_energy_distribution:
     model: 'A' # LN: LogNormal, A: Amati-like
     Ep0: 631 # keV
     sigmaEp: 0.44
-    alpha_amati: 0.26
+    alpha_amati: 0.25
     L0: 1.6e52  # erg/s
 
 t90obs_distribution:

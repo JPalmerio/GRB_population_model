@@ -1,0 +1,12 @@
+# Results will be saved in root_dir/Model_outputs/output_dir/
+output_dir: 'best_populations'
+
+Nb_GRBs: '1e6'
+
+# Samples can be anything you define in the samples.yml file
+samples: ['Stern', 'EpGBM', 'eBAT6', 'Swift', 'ECLAIRs', 'SHOALS',
+          'GBM_sample', 'BATSE_5B_sample', 'ECLAIRsS', 'THESEUS',
+          'HETE2_FRE', 'HETE2_WXM', 'HETE2_WXML', 'BAT2', 'BAT3']
+
+# Constraints can by anything you define in the obs_constraints.yml file
+constraints: ['Stern', 'EpGBM', 'eBAT6']

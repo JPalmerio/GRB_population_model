@@ -27,7 +27,7 @@ matplotlib.rc('font',**{'family':'serif','serif':['Palatino']})
 
 T_min = 2.05   # secondes
 P23_min = 0.01 # ph/cm2/s
-filename  = '/nethome/palmerio/1ere_annee/Frederic/catalogs/GBM_cat/GBM_cat_complete.txt'
+filename  = 'GBM_cat_complete.txt'
 
 # Print the content of the catalog
 overhead = pf.read_overhead(filename, splitter='|', stripper='|')

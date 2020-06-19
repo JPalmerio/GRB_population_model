@@ -103,10 +103,11 @@ def calc_cat_duration(fname, verbose=False):
     return delta_t
 
 
-def create_filtered_sample(fname, keys, func=None, func_args={}, ax=None, log=False, kde=True,
-    header=2, verbose=False, debug=False, errors='raise', **kwargs):
+def create_filtered_sample(fname, keys, func=None, func_args={}, log=False,
+    header=2, verbose=False, debug=False, errors='raise', subdf=False):
     """
-        Convenience function to quickly plot an observed sample from a given file name.
+        Convenience function to quickly extract an observed sample from
+        a given file name.
         A function to filter or cut the sample can be passed as func.
     """
     # Read the entire file
@@ -141,6 +142,8 @@ def create_filtered_sample(fname, keys, func=None, func_args={}, ax=None, log=Fa
     if verbose:
         print("Sample size :{}".format(len(df_obs.dropna())))
 
+    if subdf:
+        df_obs = df_obs[keys].copy()
     return df_obs
 
 

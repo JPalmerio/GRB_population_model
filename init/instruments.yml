@@ -11,9 +11,9 @@ FREGATE:
 WXM:
   Emin: 2.  # keV
   Emax: 10. # keV
-WXM_large:
+WXML:
   Emin: 2.  # keV
-  Emax: 10. # keV
+  Emax: 30. # keV
 GBM:
   Emin: 10.    # keV
   Emax: 1000. # keV
@@ -24,3 +24,15 @@ ECLAIRs:
 BATSE_5B:
   Emin: 20.    # keV
   Emax: 2000.  # keV
+THESEUS:
+  Emin: 2.    # keV
+  Emax: 30.  # keV
+ECLAIRsS:
+  Emin: 4.   # keV
+  Emax: 120. # kev
+BAT2:
+  Emin: 25.  # keV
+  Emax: 50. # keV
+BAT3:
+  Emin: 50.  # keV
+  Emax: 100. # keV

@@ -13,7 +13,7 @@ except ImportError:
     log.error("Could not import f90_functions, f90 set to False")
 
 
-def init_ECLAIRs(ECLAIRs_dir, ECLAIRs_config, f90=True):
+def init_ECLAIRs(ECLAIRs_dir, Emin, Emax, n_sigma=None, f90=True):
     """
         Function to estimate detection threshold of ECLAIRs using
         realistic noise background.
@@ -21,13 +21,8 @@ def init_ECLAIRs(ECLAIRs_dir, ECLAIRs_config, f90=True):
         If no sigma was set, the default 6.5 is assumed.
     """
 
-    Emin = ECLAIRs_config['Emin']  # keV
-    Emax = ECLAIRs_config['Emax']  # keV
-
-    if ECLAIRs_config['n_sigma'] is None:
+    if n_sigma is None:
         n_sigma = 6.5
-    else:
-        n_sigma = ECLAIRs_config['n_sigma']
 
     log.debug("==============================================")
     log.debug("===           ECLAIRs instrument           ===")

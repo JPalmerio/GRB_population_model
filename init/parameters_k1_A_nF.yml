@@ -3,15 +3,15 @@ luminosity_function:
     logLmin: 49.6989700043  # log(erg/s)
     logLmax: 53.0  # log(erg/s)
     logLbreak: 52.9    # log(erg/s)
-    slope: 1.46
+    slope: 1.47
     k_evol: 1.0  # k_evol >= 0
 
 redshift_distribution:
     model: 'BExp'  # BExp: Broken Exponential
     zmax: 20
-    zm: 2.08
-    a: 1.28
-    b: -0.26
+    zm: 2.1
+    a: 1.2
+    b: -0.27
     zeta:
 
 spectral_shape:
@@ -22,9 +22,9 @@ spectral_shape:
 
 peak_energy_distribution:
     model: 'A' # LN: LogNormal, A: Amati-like
-    Ep0: 589 # keV
+    Ep0: 602. # keV
     sigmaEp: 0.42
-    alpha_amati: 0.36
+    alpha_amati: 0.35
     L0: 1.6e52  # erg/s
 
 t90obs_distribution:

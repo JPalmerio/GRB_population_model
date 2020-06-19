@@ -20,7 +20,7 @@ log = logging.getLogger(__name__)
 
 
 def create_GRB_population_from(Nb_GRBs, cosmo, params, incl_instruments, incl_samples, incl_constraints,
-    ECLAIRs_prop=None, output_dir=None, nGRB0=None, nGRB0_err=None, run_mode=None, savefig=False):
+    ECLAIRs_prop=None, output_dir=None, nGRB0=None, nGRB0_err=None, run_mode=None, savefig=False, f90=True):
     """
         A convenienve function to quickly create a GRB population given
         a set of cosmology, parameters, instruments, samples,
@@ -29,15 +29,28 @@ def create_GRB_population_from(Nb_GRBs, cosmo, params, incl_instruments, incl_sa
 
     GRB_pop = GRBPopulation(Nb_GRBs=Nb_GRBs,
                             output_dir=output_dir)
-    GRB_pop.draw_GRB_properties(cosmo=cosmo, params=params, run_mode=run_mode, savefig=savefig)
-    GRB_pop.calculate_quantities(instruments=incl_instruments, samples=incl_samples, ECLAIRs_prop=ECLAIRs_prop)
+
+    GRB_pop.draw_GRB_properties(cosmo=cosmo,
+                                params=params,
+                                run_mode=run_mode,
+                                savefig=savefig)
+
+    GRB_pop.calculate_quantities(instruments=incl_instruments,
+                                 samples=incl_samples,
+                                 ECLAIRs_prop=ECLAIRs_prop,
+                                 f90=f90)
+
     GRB_pop.create_mock_constraints(constraints=incl_constraints)
+
     GRB_pop.compare_to_observational_constraints(constraints=incl_constraints)
+
     if nGRB0 is None:
         GRB_pop.normalize_to_Stern()
     else:
         GRB_pop.normalize_from(nGRB0, nGRB0_err)
+
     GRB_pop.summary()
+
     return GRB_pop
 
 
@@ -49,9 +62,7 @@ class GRBPopulation:
         elif Nb_GRBs is not None and properties is None:
             if isinstance(Nb_GRBs, str):
                 Nb_GRBs = int(float(Nb_GRBs))
-            if not isinstance(Nb_GRBs, int):
-                raise TypeError
-            self.Nb_GRBs = Nb_GRBs
+            self.Nb_GRBs = int(Nb_GRBs)
             self.properties = pd.DataFrame({})
         elif Nb_GRBs is None and properties is not None:
             if not isinstance(properties, pd.DataFrame):
@@ -71,10 +82,13 @@ class GRBPopulation:
         self.likelihood_params = {}
         self.normalization = {}
 
-    def draw_L(self, Nb_GRBs=None, model='EPL', z=None, run_mode=None, savefig=False, **params):
+    def draw_L(self, Nb_GRBs=None, model='EPL', z=None, seed=1, run_mode=None, savefig=False, **params):
         """
             Draw L from the desired luminosity function
         """
+
+        if seed is not None:
+            np.random.seed(seed)
 
         self.parameters['luminosity_function'] = {'model':model, **params}
 
@@ -189,10 +203,13 @@ class GRBPopulation:
 
         return L.copy()
 
-    def draw_z(self, cosmo=None, Nb_GRBs=None, zmax=20, model='SH', run_mode=None, savefig=False, **params):
+    def draw_z(self, cosmo=None, Nb_GRBs=None, zmax=20, model='SH', seed=2, run_mode=None, savefig=False, **params):
         """
             Draw z from a redshift distribution
         """
+
+        if seed is not None:
+            np.random.seed(seed)
 
         if Nb_GRBs is None:
             Nb_GRBs = self.Nb_GRBs
@@ -273,10 +290,13 @@ class GRBPopulation:
                 self.save_fig(fig, 'z_draw.pdf')
         return z.copy()
 
-    def draw_Ep(self, Nb_GRBs=None, model='LN', L=None, run_mode=None, savefig=False, **params):
+    def draw_Ep(self, Nb_GRBs=None, model='LN', L=None, seed=3, run_mode=None, savefig=False, **params):
         """
             Draw Ep distribution
         """
+
+        if seed is not None:
+            np.random.seed(seed)
 
         self.parameters['peak_energy_distribution'] = {'model':model, **params}
 
@@ -318,10 +338,13 @@ class GRBPopulation:
                 self.save_fig(fig, 'Ep_draw.pdf')
         return Ep.copy()
 
-    def draw_spec(self, Nb_GRBs=None, model='Fixed', run_mode=None, savefig=False, data_dir=root_dir/'data', **params):
+    def draw_spec(self, Nb_GRBs=None, model='Fixed', seed=4, run_mode=None, savefig=False, data_dir=root_dir/'data', **params):
         """
             Draw the spectral parameters alpha, beta and ktild
         """
+
+        if seed is not None:
+            np.random.seed(seed)
 
         self.parameters['spectral_shape'] = {'model':model, **params}
 
@@ -380,12 +403,15 @@ class GRBPopulation:
                 self.save_fig(fig, 'alpha_beta_draw.pdf')
         return alpha.copy(), beta.copy(), ktild.copy()
 
-    def draw_t90(self, z_med=None, Nb_GRBs=None, run_mode=None, savefig=False, **params):
+    def draw_t90(self, z_med=None, Nb_GRBs=None, seed=5, run_mode=None, savefig=False, **params):
         """
             Draw t90 from LogNormal distribution corrected by the median
             redshift of the population on which the t90obs distribution
             was adjusted.
         """
+
+        if seed is not None:
+            np.random.seed(seed)
 
         self.parameters['t90obs_distribution'] = params
 
@@ -438,10 +464,13 @@ class GRBPopulation:
                 self.save_fig(fig, 't90_draw.pdf')
         return t90.copy()
 
-    def draw_Cvar(self, Nb_GRBs=None, t90obs=None, run_mode=None, savefig=False, **params):
+    def draw_Cvar(self, Nb_GRBs=None, t90obs=None, seed=6, run_mode=None, savefig=False, **params):
         """
             Draw Cvar from t90obs correlated distribution
         """
+
+        if seed is not None:
+            np.random.seed(seed)
 
         self.parameters['Cvar_distribution'] = params
 
@@ -522,7 +551,7 @@ class GRBPopulation:
 
         return self.properties
 
-    def calculate_quantities(self, instruments, samples, ECLAIRs_prop=None):
+    def calculate_quantities(self, instruments, samples, ECLAIRs_prop=None, calc_pdet=True, f90=True):
         """
             Convenience function to calculate:
             - peak photon flux
@@ -531,17 +560,18 @@ class GRBPopulation:
             - energy fluence
             And then the detection probability for the included samples
         """
-        self.calc_peak_photon_flux(instruments, ECLAIRs_prop=ECLAIRs_prop)
-        self.calc_peak_energy_flux(instruments, ECLAIRs_prop=ECLAIRs_prop)
+        self.calc_peak_photon_flux(instruments, ECLAIRs_prop=ECLAIRs_prop, f90=f90)
+        self.calc_peak_energy_flux(instruments, ECLAIRs_prop=ECLAIRs_prop, f90=f90)
         self.calc_photon_fluence(instruments)
         self.calc_energy_fluence(instruments)
-        if ECLAIRs_prop is not None:
-            self.calc_det_prob(samples, **ECLAIRs_prop)
-        else:
-            self.calc_det_prob(samples)
+        if calc_pdet:
+            if ECLAIRs_prop is not None:
+                self.calc_det_prob(samples, **ECLAIRs_prop)
+            else:
+                self.calc_det_prob(samples)
         return
 
-    def calc_peak_photon_flux(self, instruments, ECLAIRs_prop=None):
+    def calc_peak_photon_flux(self, instruments, ECLAIRs_prop=None, f90=True):
         """
             Calculate the peak photon flux for every GRB in the
             population.
@@ -558,10 +588,11 @@ class GRBPopulation:
         ph.calc_peak_photon_flux(GRB_prop=self.properties,
                                  instruments=_instruments,
                                  shape=self.parameters['spectral_shape']['shape'],
-                                 ECLAIRs_prop=ECLAIRs_prop)
+                                 ECLAIRs_prop=ECLAIRs_prop,
+                                 f90=f90)
         return
 
-    def calc_peak_energy_flux(self, instruments, ECLAIRs_prop=None):
+    def calc_peak_energy_flux(self, instruments, ECLAIRs_prop=None, f90=True):
         """
             Calculate the peak energy flux for every GRB in the
             population.
@@ -571,7 +602,8 @@ class GRBPopulation:
         ph.calc_peak_energy_flux(GRB_prop=self.properties,
                                  instruments=instruments,
                                  shape=self.parameters['spectral_shape']['shape'],
-                                 ECLAIRs_prop=ECLAIRs_prop)
+                                 ECLAIRs_prop=ECLAIRs_prop,
+                                 f90=f90)
         return
 
     def calc_photon_fluence(self, instruments):
@@ -643,7 +675,7 @@ class GRBPopulation:
                                            'err_unnormed':np.sqrt(mod)}
         return
 
-    def compare_to_observational_constraints(self, constraints, method='chi2'):
+    def compare_to_observational_constraints(self, constraints):
         """
             First normalize the population to the observational
             constraints then calculate the likelihood of the current
@@ -661,28 +693,25 @@ class GRBPopulation:
             self.mock_constraints[name]['norm'] = norm
             self.mock_constraints[name]['hist'] = norm * model
             self.mock_constraints[name]['err'] = norm * error
+
             # Calculate likelihood
-            if method == 'chi2':
-                chi2 = st.chi2(mod=self.mock_constraints[name]['hist'],
-                               obs=constraint['hist'],
-                               err=constraint['err'])
-                self.likelihood_params['_'.join(['chi2',name])] = chi2
-                chi2_tot += chi2
-                lnL = -0.5 * chi2
-            elif method == 'pBIL':
-                lnL = st.pBIL(mod=self.mock_constraints[name]['hist'],
-                              obs=constraint['hist'],
-                              sum_ln_oi_factorial=constraint['sum_ln_oi_factorial'])
-                # If using pBIL, add a factor of 10 weight to the eBAT6
-                # constraint to make it more impactful
-                # if name == 'eBAT6':
-                #     lnL *= 10
+            chi2 = st.chi2(mod=self.mock_constraints[name]['hist'],
+                           obs=constraint['hist'],
+                           err=constraint['err'])
+            self.likelihood_params['_'.join(['chi2',name])] = chi2
+            chi2_tot += chi2
+            lnL = st.pBIL(mod=self.mock_constraints[name]['hist'],
+                          obs=constraint['hist'],
+                          sum_ln_oi_factorial=constraint['sum_ln_oi_factorial'])
+            # If using pBIL, add a factor of 10 weight to the eBAT6
+            # constraint to make it more impactful
+            # if name == 'eBAT6':
+            #     lnL *= 10
             self.likelihood_params['_'.join(['lnL',name])] = lnL
             lnL_tot += lnL
 
         self.likelihood_params['lnL_tot'] = lnL_tot
-        if method == 'chi2':
-            self.likelihood_params['chi2_tot'] = chi2_tot
+        self.likelihood_params['chi2_tot'] = chi2_tot
 
         return
 
@@ -693,13 +722,14 @@ class GRBPopulation:
         """
         R_intr = nGRB0 * self.normalization['pseudo_collapse_rate']
         T_sim = self.Nb_GRBs/R_intr
-        if nGRB0_err is not None:
+        if nGRB0_err is None:
+            R_intr_err = np.nan
+            T_sim_err = np.nan
+            nGRB0_err = np.nan
+        else:
             rel_error = nGRB0_err/nGRB0
             R_intr_err = R_intr * rel_error
             T_sim_err = T_sim * rel_error
-        else:
-            R_intr_err = np.nan
-            T_sim_err = np.nan
 
         self.normalization['nGRB0'] = nGRB0
         self.normalization['nGRB0_err'] = nGRB0_err
@@ -759,7 +789,7 @@ class GRBPopulation:
         norm = np.sum(obs*mod/err**2) / np.sum((mod/err)**2)
         return norm
 
-    def save_to(self, fname=None, save_memory=True):
+    def save_to(self, fname=None, save_memory=False):
         """
             Save the population to a pickle file.
             You can set save_memory to True to save memory storage; in
@@ -783,7 +813,7 @@ class GRBPopulation:
             gp_to_save = self
 
         with open(fname, 'wb') as f:
-            pickle.dump(gp_to_save, f)
+            pickle.dump(gp_to_save, f, protocol=-1)
         log.info('Saved GRB population to {}'.format(fname))
         return fname
 

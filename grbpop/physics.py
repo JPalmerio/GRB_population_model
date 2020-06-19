@@ -3,6 +3,8 @@ import time
 import logging
 import scipy.integrate as integrate
 import constants as cst
+# from multiprocessing import Pool
+# from functools import partial
 
 log = logging.getLogger(__name__)
 
@@ -57,7 +59,7 @@ def Eiso(L, z, Cvar, t90obs, Ep, alpha, beta, ktild, Emin, Emax,
 
 def Btild(x, ktild, alpha, beta, spec='Band'):
     """
-        Unitless spectral shape (of N_E, i.e. photon spectrum in ph/cm2/s/keV)
+        Unitless spectral shape (of L_E/E, i.e. photon spectrum in ph/cm2/s/keV)
     """
 
     # Need this for broadcasting in higher dimensions
@@ -460,9 +462,9 @@ def calc_det_prob_SVOM(cts, offax_corr, omega_ECLAIRs, omega_ECLAIRs_tot, t90obs
         det_prob_tot = np.where((det_prob_cts == 1) | (det_prob_flnc == 1),
                                 np.ones(offax_corr.shape),
                                 np.zeros(offax_corr.shape))
-        det_prob_tot = np.sum(det_prob_tot*omega_ECLAIRs)/omega_ECLAIRs_tot
-        det_prob_cts = np.sum(det_prob_cts*omega_ECLAIRs)/omega_ECLAIRs_tot
-        det_prob_flnc = np.sum(det_prob_flnc*omega_ECLAIRs)/omega_ECLAIRs_tot
+        det_prob_tot = np.sum(det_prob_tot*omega_ECLAIRs)/(4*np.pi)
+        det_prob_cts = np.sum(det_prob_cts*omega_ECLAIRs)/(4*np.pi)
+        det_prob_flnc = np.sum(det_prob_flnc*omega_ECLAIRs)/(4*np.pi)
     return det_prob_tot, det_prob_cts, det_prob_flnc
 
 
@@ -510,3 +512,59 @@ def calc_det_prob(GRB_prop, samples, **ECLAIRs_prop):
         log.debug(f"Done in {t2-t1:.3f} s")
 
     return
+
+
+# def f_test(a, b, c=0):
+
+#     return a+b+c
+
+
+# def para_test(a, b, c=0, para=False):
+
+#     try:
+#         Nb_GRBs = len(a)
+#     except TypeError:
+#         Nb_GRBs = 1
+
+#     if para:
+#         f = partial(f_test, c=c)
+#         t1 = time.time()
+#         iterator = [(a_i,b_i) for a_i, b_i in zip(a,b)]
+#         t2 = time.time()
+#         print(f'Iterator: {iterator} Done in {t2-t1:.3f} s')
+#         with Pool(processes=4) as pool:
+#             x = pool.starmap(f, iterator)
+#     else:
+#         x = np.zeros(Nb_GRBs)
+#         for i in range(Nb_GRBs):
+#             x[i] = f_test(a[i], b[i], c)
+#     return x
+
+
+# if __name__ == '__main__':
+#     import cosmology as cs
+#     Nb_GRBs = 10
+#     L = np.logspace(48, 55, Nb_GRBs)
+#     z = np.linspace(0.01, 6, Nb_GRBs)
+#     cosmo = cs.create_cosmology()
+#     D_L = cs.Lum_dist(z, cosmo)
+#     Ep = np.logspace(1, 4, Nb_GRBs)
+#     alpha = 0.6*np.ones(Nb_GRBs)
+#     beta = 2.5*np.ones(Nb_GRBs)
+#     ktild = (2.0-alpha) * (beta-2.0) / (beta-alpha)
+#     spec = 'BPL'
+
+#     t1 = time.time()
+#     pflx = pht_flux(L, z, Ep, D_L, alpha, beta, ktild, Emin=50, Emax=300, spec=spec, f90=False)
+#     t2 = time.time()
+#     print(f"Without parallelization: pflx calculated in {1000*(t2-t1):.3f} ms")
+#     # print(f"{pflx}")
+
+#     t1 = time.time()
+#     pflx_para = pht_flux(L, z, Ep, D_L, alpha, beta, ktild, Emin=50, Emax=300, spec=spec, f90=False, para=True)
+#     t2 = time.time()
+#     print(f"With parallelization: pflx calculated in {1000*(t2-t1):.3f} ms")
+#     # print(f"{pflx_para}")
+#     import matplotlib.pyplot as plt
+#     plt.scatter(pflx, pflx_para)
+#     plt.show()

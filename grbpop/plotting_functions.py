@@ -71,7 +71,7 @@ def plot_spectral_constraint(ax, pop=None, plot_obs=True, **kwargs):
                                      {'filtering_key':'pflx_band_phtfluxb', 'lim_min':0.9, 'errors':'coerce'}],
                           log=True, verbose=True, kde=True,
                           bins=bins_Ep,
-                          ax=ax, density=True, label='Spectral Constraint', alpha=0.8,
+                          ax=ax, density=True, label='Spectral Constraint', alpha=0.8, zorder=0,
                           color='lightgray', errors='coerce')
         ax.get_legend().remove()
     if pop is not None:
@@ -97,8 +97,8 @@ def plot_spectral_constraint(ax, pop=None, plot_obs=True, **kwargs):
                         y_mod_plottable-y_mod_err_plottable,
                         alpha=0.6, color=plt.getp(art,'color'), zorder=plt.getp(art,'zorder'))
     ax.set_ylim(0)
-    ax.set_xlim(1,4)
-    ax.set_xlabel(r'log Peak Energy $\rm{[keV]}$')
+    ax.set_xlim(0.5,4)
+    ax.set_xlabel(r'log $E_{p {\rm obs}}~\rm{[keV]}$')
     ax.set_ylabel(r'Number density')
 
     return
@@ -113,7 +113,7 @@ def plot_redshift_constraint(ax, pop=None, plot_obs=True, **kwargs):
                           key='redshift',
                           log=False, verbose=True, kde=True,
                           bins=bins_eBAT6,
-                          ax=ax, density=True, label=None, alpha=0.8,
+                          ax=ax, density=True, label=None, alpha=0.8, zorder=0,
                           color='lightgray', errors='coerce')
         ax.errorbar(x, obs_lin, xerr=[x_errm, x_errp], yerr=err_lin, color='k', fmt='none')
         ax.get_legend().remove()
@@ -197,7 +197,10 @@ def plot_SHOALS_distr(pop, key, SHOALS_file=None, cumul=False, ax=None, plot_obs
     df_obs = io.read_SHOALS_file(SHOALS_file)
     data_obs = df_obs[key].to_numpy()
 
-    cond = pop.properties['pdet_SHOALS'] == 1
+    try:
+        cond = pop.properties['pdet_SHOALS'] == 1
+    except KeyError:
+        cond = pop.properties['erg_flnc_BAT'] >= 1e-6
     mod = pop.properties[cond][key_mod].to_numpy()
 
     if log:
@@ -367,7 +370,7 @@ def fig_marg(figsize=(10, 8), cb=True, **kwargs):
         Optional: cb stands for colorbar
     """
 
-    fig = plt.figure(figsize=figsize, **kwargs)
+    fig = plt.figure(figsize=figsize, tight_layout=False, **kwargs)
 
     if cb:
         ax_center = fig.add_axes([0.25, 0.10, 0.60, 0.70])
@@ -422,7 +425,7 @@ def cool_hist2d(x, y, c=None, mode='scatter', cb=True, fig=None, figsize=(10, 8)
             axes['cb'] = ax_list[3]
 
     if mode == 'scatter':
-        art = axes['center'].scatter(x, y, c=c, edgecolor='k', **kwargs)
+        art = axes['center'].scatter(x, y, c=c, **kwargs)
     elif mode == 'hist2d':
         corner.hist2d(x, y, ax=axes['center'], **hist2d_kwargs)
     elif mode == 'kde2d':
@@ -557,88 +560,7 @@ def plot_logNlogP(fname, key, func=None, func_args={}, bins=None, sep=None, hdr=
     return hist, hist_err
 
 
-def plot_eBAT6_EpL(fname=None, axes=None, fname_lim=None, mini_cax=False, kde=False):
-    if fname is None:
-        fname = root_dir/'catalogs/BAT6_cat/eBAT6_cat.txt'
-    if fname_lim is None:
-        fname_lim = root_dir/'resources/BAT6_detection_limit_EpL_plane.txt'
-
-    if axes is None:
-        fig, axes = fig_marg(figsize=(10, 8), cb=True)
-    else:
-        fig = plt.gcf()
-
-    if mini_cax:
-        m_cax = fig.add_axes([0.780, 0.125, 0.015, 0.20])
-        axes['mini_cb'] = m_cax
-        fsize = 12
-    else:
-        axes['mini_cb'] = axes['cb']
-        fsize = 20
-
-    # Retrieve observational data
-    Ep_obs = io.read_data(fname, 13, stripper='|', splitter='|', single_err=True)
-    L_obs = io.read_data(fname, 15, stripper='|', splitter='|', single_err=True)
-    z_obs = io.read_data(fname, 1, stripper='|', splitter='|', err=False)
-    L_obs[0:3] = L_obs[0:3] * 10**51
-    Ep_obs = msc.lin_to_log_ndarray(Ep_obs)
-    L_obs = msc.lin_to_log_ndarray(L_obs)
-
-    # Plot them
-    art = scatter_incomplete_ndarray(axes['center'], L_obs, Ep_obs, colormap=[z_obs[0],0.,6.,'YlOrRd'],
-                                     marker='o', s=50, edgecolor='k', linewidth=0.8, label='eBAT6 observed data')
-    mask = np.isfinite(L_obs[0]) & np.isfinite(Ep_obs[0])
-    Ep_obs_masked = msc.mask_ndarray(Ep_obs, mask)
-    L_obs_masked = msc.mask_ndarray(L_obs, mask)
-    if kde:
-        sns.kdeplot(L_obs_masked[0], Ep_obs_masked[0], ax=axes['center'], n_levels=5,
-                    colors='C1', cmap=None, shade=False, shade_lowest=False)
-    cb2 = fig.colorbar(art, cax=axes['mini_cb'])
-    cb2.set_label('Redshift (z)', **{'size':fsize})
-    cb2.ax.tick_params(labelsize=12)
-
-    # Detection limit of BAT6
-    Ep_lim = io.read_column(fname_lim, 0, splitter='\t')
-    z_lim = np.asarray([0.3, 2., 5.])
-    L_lim = np.zeros((len(z_lim), len(Ep_lim)))
-    ls = ['--', '-.',':']
-    for i in range(len(z_lim)):
-        L_lim[i] = io.read_column(fname_lim, i+1, splitter='\t')
-        axes['center'].plot(np.log10(L_lim[i]), np.log10(Ep_lim), ls=ls[i], c='k')
-    axes['center'].text(x=0.11, y=0.9, s="BAT6 detection threshold at z = {:.1f}".format(z_lim[0]),
-                        transform=axes['center'].transAxes)
-    axes['center'].text(x=0.685, y=0.9, s="z = {:.0f}".format(z_lim[1]),
-                        transform=axes['center'].transAxes)
-    axes['center'].text(x=0.87, y=0.9, s="z = {:.0f}".format(z_lim[2]),
-                        transform=axes['center'].transAxes)
-
-    # Left histogram
-    bins_Ep = np.linspace(0,4,30)
-    axes['left'].hist(Ep_obs_masked[0], bins=bins_Ep, orientation='horizontal', label='eBAT6 observed',
-                      edgecolor='k', linewidth=0.5, density=True, color='lightgray', alpha=0.8)
-    sns.kdeplot(Ep_obs_masked[0], ax=axes['left'], vertical=True, color='k')
-    axes['left'].invert_xaxis()
-    axes['left'].autoscale(True, axis='x')
-    # Top histogram
-    bins_L = np.linspace(48,55,30)
-    axes['top'].hist(L_obs_masked[0], bins=bins_L, label='eBAT6 observed',
-                     edgecolor='k',linewidth=0.5, density=True, color='lightgray', alpha=0.8)
-    sns.kdeplot(L_obs_masked[0], ax=axes['top'], label='KDE', color='k')
-    axes['top'].legend(loc='upper left')
-    axes['top'].autoscale(True, axis='y')
-
-    axes['left'].set_ylabel(r'log Peak Energy $\rm{[keV]}$')
-    axes['center'].set_xlabel(r'log Luminosity $\rm{[erg/s]}$')
-    axes['center'].set_xlim(49,55)
-    axes['center'].set_ylim(1, 4)
-    leg = axes['center'].legend(loc='lower right', scatterpoints=1)
-    leg.legendHandles[-1].set_color('C1')
-    leg.legendHandles[-1].set_edgecolor('k')
-
-    return
-
-
-def plot_eBAT6_EpL_for_pub(fname=None, axes=None, fname_lim=None, mini_cax=False, kde=False,
+def plot_eBAT6_EpL(fname=None, axes=None, fname_lim=None, mini_cax=False, kde=False,
     show_relation=True):
     if fname is None:
         fname = root_dir/'catalogs/BAT6_cat/eBAT6_cat.txt'
@@ -663,15 +585,18 @@ def plot_eBAT6_EpL_for_pub(fname=None, axes=None, fname_lim=None, mini_cax=False
     L_obs = io.read_data(fname, 15, stripper='|', splitter='|', single_err=True)
     z_obs = io.read_data(fname, 1, stripper='|', splitter='|', err=False)
     L_obs[0:3] = L_obs[0:3] * 10**51
-    Ep_obs = msc.lin_to_log_ndarray(Ep_obs)
-    L_obs = msc.lin_to_log_ndarray(L_obs)
-
-    # Plot them
-    art = scatter_incomplete_ndarray(axes['center'], L_obs, Ep_obs, colormap=[z_obs[0],0.,6.,'YlOrRd'],
-                                     marker='o', s=100, edgecolor='k', linewidth=0.8, label='eBAT6 observed data')
     mask = np.isfinite(L_obs[0]) & np.isfinite(Ep_obs[0])
+    z_obs_masked = msc.mask_ndarray(z_obs, mask)
     Ep_obs_masked = msc.mask_ndarray(Ep_obs, mask)
     L_obs_masked = msc.mask_ndarray(L_obs, mask)
+    Ep_obs_masked = msc.lin_to_log_ndarray(Ep_obs_masked)
+    L_obs_masked = msc.lin_to_log_ndarray(L_obs_masked)
+
+    # Plot them
+    art = scatter_incomplete_ndarray(axes['center'], L_obs_masked, Ep_obs_masked,
+                                     colormap=[z_obs_masked[0],0.,6.,'YlOrRd'],
+                                     marker='o', s=100, edgecolor='k', linewidth=0.8,
+                                     label='eBAT6 observed data')
     if kde:
         sns.kdeplot(L_obs_masked[0], Ep_obs_masked[0], ax=axes['center'], n_levels=5,
                     shade=True, shade_lowest=False, cmap='Greys', alpha=0.8)

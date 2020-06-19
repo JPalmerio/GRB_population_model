@@ -2,9 +2,9 @@ luminosity_function:
     model: 'ES'  # ES: Evolv. Schechter, EPL: Evolv. Power Law
     logLmin: 49.6989700043  # log(erg/s)
     logLmax: 53.0  # log(erg/s)
-    logLbreak: 52.35    # log(erg/s)
+    logLbreak: 52.4    # log(erg/s)
     slope: 1.45
-    k_evol: 1.56  # k_evol >= 0
+    k_evol: 1.6  # k_evol >= 0
 
 redshift_distribution:
     model: 'BExp'  # BExp: Broken Exponential
